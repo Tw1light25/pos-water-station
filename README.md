@@ -124,14 +124,18 @@ npm run password    # reset a locked-out owner password
 4. Add these environment variables under **Site configuration -> Environment
    variables**:
 
-   | Key | Value |
-   | --- | --- |
-   | `DB_HOST` | your TiDB host |
-   | `DB_PORT` | `4000` |
-   | `DB_USER` | your TiDB user |
-   | `DB_PASS` | your TiDB password |
-   | `DB_NAME` | `pos-water-station` |
-   | `DB_SSL` | `true` |
+   | Key | Value | Mark as secret? |
+   | --- | --- | --- |
+   | `DB_HOST` | your TiDB host | **no** |
+   | `DB_PORT` | `4000` | **no** |
+   | `DB_USER` | your TiDB user | no |
+   | `DB_NAME` | `pos-water-station` | **no** |
+   | `DB_PASS` | your TiDB password | **yes** |
+   | `DB_SSL` | `true` | no |
+
+   Only `DB_PASS` should be marked secret. Marking the others makes Netlify
+   search the whole repo for values like `4000` and `pos-water-station`, which
+   appear in ordinary code, and it will fail the build over them.
 
    That is enough: the connection is encrypted without verifying the server
    certificate. To verify it as well, also add `DB_CA_CERT` containing the text
@@ -146,20 +150,30 @@ functions to connect.
 
 ### "Build failed - exposed secrets"
 
-Netlify's smart secret scanning reads your repository before publishing and
-**fails the build** if it finds something that looks like a credential. It keys
-off content, not file names, so even a commented-out placeholder can trip it -
-the usual culprit is a line containing a certificate header (a PEM marker).
+Netlify scans in two ways, and both **fail the build**:
 
-- Run **`npm run check`** before pushing: it fails on PEM markers, on tracked
-  `.env`/`.pem`/`data/`/`hide/` files, and on your real password leaking out
-- `netlify.toml` already lists those paths in `SECRETS_SCAN_OMIT_PATHS`
-- Only ever add the real credentials in Netlify's **Environment variables**, never
-  in a file that is committed
+1. **Smart detection** - pattern-matches credential-looking content anywhere in
+   the repo or the build output (PEM markers, API-key shapes). Only ever add
+   real credentials in Netlify's **Environment variables**, never in a file that
+   is committed.
+2. **Secret values** - for any environment variable you mark as *secret*, it
+   searches the repo and build output for that exact value.
 
-If a genuine false positive remains, either safelist the exact value with
-`SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES`, or set
-`SECRETS_SCAN_SMART_DETECTION_ENABLED=false` to turn smart detection off.
+Fixes, in order of preference:
+
+- Run **`npm run check`** before pushing. It fails on PEM markers, on tracked
+  `.env`/`.pem`/`data/`/`hide/` files, and on your real password leaking out.
+- Make sure only **`DB_PASS`** is marked secret in Netlify. `DB_HOST`,
+  `DB_PORT` and `DB_NAME` are not secrets, and their values appear naturally in
+  the code (`4000`, `pos-water-station`, the hostname).
+- `netlify.toml` already carries the two escape hatches that Netlify recommends:
+  `SECRETS_SCAN_OMIT_PATHS` (files) and `SECRETS_SCAN_OMIT_KEYS` (variables to
+  ignore when matching values).
+- If a genuine false positive remains, safelist the exact string with
+  `SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES`, or turn scanning off entirely with
+  `SECRETS_SCAN_SMART_DETECTION_ENABLED=false` / `SECRETS_SCAN_ENABLED=false`.
+
+The deploy log always names the file and line it objected to - read that first.
 
 ## Project layout
 

@@ -8,9 +8,13 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Netlify's smart secret scanning reads repo code before publishing. These
-  # paths are never part of the deployed site and only ever hold placeholders.
+  # Netlify's secret scanning reads repo code before publishing. These paths are
+  # never part of the deployed site and only ever hold placeholders.
   SECRETS_SCAN_OMIT_PATHS = ".env.example,certs/,data/,hide/"
+  # DB_HOST / DB_PORT / DB_NAME are not secrets - their values (a public AWS
+  # endpoint, the port 4000, and the database name) legitimately appear
+  # throughout the code and docs. Only DB_PASS stays scanned.
+  SECRETS_SCAN_OMIT_KEYS = "DB_HOST,DB_PORT,DB_NAME"
 
 # Explicit page routes, so the site does not depend on pretty-URL behaviour.
 [[redirects]]

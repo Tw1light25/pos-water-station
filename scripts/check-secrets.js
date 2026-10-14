@@ -109,18 +109,22 @@ if (offending.length) {
 // 2. PEM markers in text files (what tripped Netlify)
 console.log('\n2. PEM markers in source files');
 
+// Built at runtime: this file must not contain the marker it searches for,
+// otherwise it trips both this check and Netlify's scanner.
+const PEM_MARKER = '-'.repeat(5) + 'BEGIN';
+
 const pemFiles = [];
 for (const relative of scanList) {
   if (/\.(png|jpg|jpeg|gif|ico|woff2?|ttf|pdf|zip)$/i.test(relative)) continue;
   const text = readText(relative);
-  if (text && text.includes('-----BEGIN')) pemFiles.push(relative);
+  if (text && text.includes(PEM_MARKER)) pemFiles.push(relative);
 }
 
 if (pemFiles.length) {
-  for (const relative of pemFiles) fail(`${relative} contains a "-----BEGIN" marker`);
+  for (const relative of pemFiles) fail(`${relative} contains a certificate marker`);
   console.log('         Netlify\'s secret scanning blocks builds that contain these.');
 } else {
-  pass('No PEM markers in any file');
+  pass('No certificate markers in any file');
 }
 
 // 3. the real database password must not appear anywhere
