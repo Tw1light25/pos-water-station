@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Water Station POS</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/animations.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <div class="sidebar__logo" id="sidebar-logo"></div>
+          <div style="min-width: 0">
+            <div class="sidebar__name" id="business-name">Water Station</div>
+            <div class="sidebar__tag">Point of Sale</div>
+          </div>
+        </div>
+
+        <nav class="nav" id="nav"></nav>
+
+        <div class="sidebar__foot">
+          <div class="sync-pill" id="sync-pill">
+            <span class="dot" id="sync-dot"></span>
+            <span id="sync-label">Checking connection...</span>
+          </div>
+          <div class="sidebar__user">
+            <div class="avatar" id="avatar">O</div>
+            <div class="grow" style="min-width: 0">
+              <div id="user-name" style="font-weight: 600">owner</div>
+              <div class="muted" style="font-size: 11px">Owner</div>
+            </div>
+            <button class="btn btn--ghost btn--sm" id="logout" title="Sign out">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5M21 12H9" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <div class="grow">
+            <div class="topbar__title" id="page-title">Dashboard</div>
+            <div class="topbar__subtitle" id="page-subtitle">Overview</div>
+          </div>
+          <div class="status-chip" id="store-chip">
+            <span class="dot"></span>
+            <span id="store-label">Store status</span>
+          </div>
+        </header>
+
+        <main class="view" id="view"></main>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts"></div>
+    <script type="module" src="/assets/js/app.js"></script>
+  </body>
+</html>

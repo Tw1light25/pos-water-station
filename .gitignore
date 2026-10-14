@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Secrets / local environment
+.env
+.env.local
+.env.*.local
+
+# TLS certificate (download your own from the TiDB console)
+certs/*.pem
+
+# Local databases + offline queue (generated at runtime)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+outbox.jsonl
+sync-state.json
+
+# Credentials folder kept by the owner
+hide/
+
+# Logs / OS noise
+*.log
+.DS_Store
+Thumbs.db

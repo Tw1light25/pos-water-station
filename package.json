@@ -1,0 +1,24 @@
+{
+  "name": "pos-water-station",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-first Point of Sale for a water station: local admin on the shop PC, TiDB Cloud as the sync hub.",
+  "engines": {
+    "node": ">=23.4.0"
+  },
+  "scripts": {
+    "admin": "node admin/server.js",
+    "password": "node scripts/reset-password.js",
+    "site:build": "node scripts/prepare-site.js",
+    "site:dev": "node scripts/prepare-site.js && node scripts/site-dev.js",
+    "db:print": "node scripts/db-init.js --print",
+    "db:init": "node scripts/db-init.js"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "express-session": "^1.19.0",
+    "mysql2": "^3.24.6"
+  }
+}

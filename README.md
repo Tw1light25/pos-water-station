@@ -1,0 +1,220 @@
+# Point of Sale - Water Station
+
+An offline-first Point of Sale for a water station.
+
+- **Shop PC (local admin)** - Node.js + Express bound to `127.0.0.1`. Works with
+  no internet at all, reading and writing a single local SQLite file. Every
+  write is queued and pushed to the cloud when the connection is available.
+- **Cloud hub** - TiDB Cloud Starter (MySQL-compatible) holds the shared data.
+- **Customer site** - landing page, order panel and order tracking, hosted on
+  Netlify (free tier, commercial use allowed).
+
+Currency is Philippine Peso (PHP). All money is stored as integer centavos.
+
+## Architecture
+
+```
+SHOP PC (works offline)                        CLOUD
+┌────────────────────────────────┐            ┌──────────────────────────────┐
+│ Express admin ──► data/pos.db  │            │ Netlify Functions (customers)│
+│      │                         │            │   │                          │
+│      └─► outbox.jsonl ─────────┼── mysql2 ─►│   ├──► TiDB (MySQL)          │
+│                                │◄── pull ───┼───┘                          │
+│ sync every 15s + on reconnect  │            │ Netlify static (site/)       │
+└────────────────────────────────┘            └──────────────────────────────┘
+Customers: order form ─► offline queue ─► retries when online ─► Functions ─► TiDB
+```
+
+## Requirements
+
+- Node.js 20 or newer (`node -v`)
+- A TiDB Cloud Starter instance (free tier)
+- A Netlify account (free) - only for deploying the customer site
+
+## Setup
+
+```bash
+# 1. Dependencies
+npm install
+
+# 2. Configuration
+cp .env.example .env      # fill in DB_HOST / DB_USER / DB_PASS
+                          # download the CA cert from the TiDB console and
+                          # save it as ./certs/ca.pem
+
+# 3. Create the database, tables and seed data
+npm run db:init
+```
+
+`db:init` is safe to re-run: tables use `IF NOT EXISTS`, missing columns are
+added automatically, and seeding only happens when a table is empty.
+
+## Windows (handing it to a client)
+
+Delivery is a folder the client unzips anywhere and installs with one double-click.
+
+```
+Install.bat                     <- the client runs this
+Start POS.bat                   <- launches the admin + opens the browser
+Reset Password.bat              <- if nobody can sign in
+windows\Install-WaterStationPOS.ps1
+windows\Make-Package.ps1        <- you run this to build the delivery ZIP
+windows\pos.ico
+certs\ca.pem                    <- ships with the app
+```
+
+**`Install.bat`** (asks for administrator rights, then):
+1. Installs **Node.js 24 LTS** if it is missing or too old — `winget` first, official MSI as a fallback
+2. Checks `certs\ca.pem` is present
+3. **Asks for the TiDB connection details** (the password is typed masked and never stored in a script)
+4. Writes `.env` — *only if one does not already exist*, so it is safe to re-run
+5. Runs `npm install`
+6. Runs `npm run db:init` to prove the database is reachable
+7. Puts a **“Water Station POS”** shortcut on the desktop
+
+**`Start POS.bat`** starts the admin minimized and opens `http://127.0.0.1:3000`.
+
+### Building the delivery ZIP (developer)
+```powershell
+powershell -ExecutionPolicy Bypass -File windows\Make-Package.ps1
+```
+Creates `WaterStationPOS-<date>.zip` on your desktop, **excluding** `hide/`, `data/`,
+`node_modules/`, `.git/` and `.env` — so credentials and your owner-login notes never
+travel with it.
+
+### Handover notes
+- The owner password lives in the **database**, not the installer. Hand it over
+  separately, and tell the client to change it from **Settings → Account**.
+- Paths in `.env` are resolved from the project folder, so the app works from any
+  location (`C:\POS`, `D:\Water Station`, a desktop shortcut).
+- The client's PC needs internet for the admin to reach TiDB.
+
+### If nobody can sign in
+Double-click **`Reset Password.bat`** (or run `npm run password`):
+- on a terminal it asks for the new password twice, hidden
+- add `-- --set NewPass123` to set it directly, or `-- --user owner` to pick an account
+- piped with no terminal it **generates** a password and prints it
+
+It writes to the local database and queues the change, so TiDB gets the new hash
+on the next admin start.
+
+## Running
+
+```bash
+npm run admin       # local admin  -> http://127.0.0.1:3000  (owner login)
+npm run site:dev    # customer site preview -> http://127.0.0.1:4000
+```
+
+Other useful commands:
+
+```bash
+npm run db:print    # print the SQL without connecting
+npm run site:build  # copy shared modules into site/assets/shared/
+```
+
+## Deploying the customer site to Netlify
+
+1. Push this project to a Git repository.
+2. In Netlify: **Add new site -> Import an existing project** and pick the repo.
+3. `netlify.toml` already sets the build command (`npm run site:build`), the
+   publish directory (`site/`) and the functions directory
+   (`netlify/functions`). Accept the defaults.
+4. Add these environment variables under **Site configuration -> Environment
+   variables**:
+
+   | Key | Value |
+   | --- | --- |
+   | `DB_HOST` | your TiDB host |
+   | `DB_PORT` | `4000` |
+   | `DB_USER` | your TiDB user |
+   | `DB_PASS` | your TiDB password |
+   | `DB_NAME` | `pos-water-station` |
+   | `DB_CA_CERT` | the contents of `ca.pem` (use `\n` for newlines) |
+
+5. Deploy. The site is available at your Netlify URL; the API lives at
+   `/api/settings`, `/api/products`, `/api/orders` and `/api/track`.
+
+The TiDB IP allowlist must include `0.0.0.0/0` (or Netlify's ranges) for the
+functions to connect.
+
+## Project layout
+
+```
+Point Of Sale/
+  admin/                     # local admin (never exposed to the network)
+    server.js                # Express app bound to 127.0.0.1
+    db.js  bootstrap.js      # local SQLite + first-run pull from TiDB
+    auth.js                  # owner login (scrypt + session)
+    routes/                  # settings, products, inventory, expenses,
+                             # orders, customers, dashboard
+    sync/                    # outbox.jsonl queue + the sync service
+    public/                  # admin UI (Tokyo Night, sidebar, Chart.js)
+  netlify/
+    functions/               # settings, products, orders, track  (public API)
+    lib/                     # shared db + http helpers
+  site/                      # customer site (Netlify publish directory)
+  shared/                    # code used by BOTH sides
+    schema.js                # single source of truth for every table
+    dialects.js              # renders the schema as MySQL or SQLite
+    migrate.js               # adds new columns to existing databases
+    ids.js  money.js         # ULIDs + centavo helpers
+    store-status.js          # open/closed logic (also runs in the browser)
+    time-buckets.js          # timezone-aware day/week/month grouping
+    mysql.js  passwords.js  tables.js
+  scripts/
+    db-init.js               # create + seed the database
+    prepare-site.js          # copy browser-safe shared modules into site/
+    site-dev.js              # local preview server for the customer site
+  windows/                   # Windows installer + packaging (see above)
+  Install.bat  Start POS.bat # double-click entry points for the client
+  data/                      # generated: pos.db, outbox.jsonl, sync-state.json
+```
+
+## Database
+
+| Table | Purpose |
+| --- | --- |
+| `users` | Owner login |
+| `settings` | Business identity, store hours, ordering defaults |
+| `products` | Catalogue with fixed prices |
+| `inventory_logs` | Append-only stock ledger (on-hand = `SUM(change_qty)`) |
+| `customers` | Customer records and notes |
+| `orders` | Orders with delivery + payment status |
+| `order_items` | Line items per order |
+| `payments` | Payments received (supports partial payments) |
+| `expenses` | Free-form outgoing money |
+
+Design rules that make offline sync safe:
+
+1. Every row has a **ULID** primary key, generated on the client.
+2. Every row has `updated_at` (epoch ms) and a soft-delete `deleted_at`.
+3. Stock is a **ledger** - additive rows, so it cannot drift between devices.
+4. Money is stored as **integer centavos**.
+5. Mutable rows resolve **last-write-wins** on `updated_at`.
+
+## How offline sync works
+
+- Every admin write goes to `data/pos.db` and appends one line to
+  `data/outbox.jsonl`.
+- Every ~15 seconds (and at startup, and when you click the sidebar pill) the
+  sync service **pushes** those lines to TiDB with an upsert, then **pulls** any
+  rows that changed in TiDB back into SQLite.
+- Customer orders placed on the website appear in the admin on the next sync.
+- On the customer side, a failed submission is stored on the device and retried
+  automatically; the client-generated order id makes retries idempotent.
+
+## Roadmap
+
+- [x] **Step 1** - Foundation: schema, helpers, TiDB setup
+- [x] **Step 2** - Local admin: login, dashboard, products, inventory, expenses,
+      orders, sales, customers, settings
+- [x] **Step 3** - Offline sync: outbox queue, push/pull service, status pill
+- [x] **Step 4** - Customer site: landing, order panel, tracking, Netlify functions
+- [ ] **Step 5** - Polish: final theme pass, end-to-end walkthrough
+
+## Notes
+
+- The admin is intentionally bound to `127.0.0.1`, so nothing outside the shop PC
+  can reach it.
+- Set a spend limit on the TiDB free tier so it cannot auto-bill unexpectedly.
+- Free Netlify accounts allow commercial use; free Vercel Hobby accounts do not.

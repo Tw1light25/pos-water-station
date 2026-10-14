@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in - Water Station POS</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/animations.css" />
+  </head>
+  <body>
+    <main class="auth">
+      <div class="auth__glow"></div>
+
+      <section class="auth__card">
+        <div class="auth__brand">
+          <div class="auth__logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M12 2.6c3.4 4.2 6 7.5 6 10.7a6 6 0 0 1-12 0c0-3.2 2.6-6.5 6-10.7Z" stroke-linejoin="round"/>
+              <path d="M9.4 13.6c0 1.6 1.2 2.8 2.6 3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h1 class="auth__title">Water Station POS</h1>
+          <p class="auth__subtitle">Owner sign in</p>
+        </div>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label class="field__label" for="username">Username</label>
+            <input class="input" id="username" name="username" autocomplete="username" autofocus required />
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="password">Password</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+
+          <div id="error" class="auth__notice hidden" role="alert"></div>
+          <div id="no-owner" class="auth__notice hidden"></div>
+
+          <button class="btn btn--primary" id="submit" type="submit" style="width: 100%; justify-content: center">
+            Sign in
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="/assets/js/login.js"></script>
+  </body>
+</html>
