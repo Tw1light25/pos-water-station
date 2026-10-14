@@ -15,6 +15,7 @@ import { bootstrapIfNeeded } from './bootstrap.js';
 import { mountAuthRoutes, requirePageAuth } from './auth.js';
 import { mountApi } from './routes/index.js';
 import { createSyncService } from './sync/sync.js';
+import { createBackupService } from './backup.js';
 import { OUTBOX_PATH } from './sync/outbox.js';
 
 const PORT = Number(process.env.ADMIN_PORT || 3000);
@@ -47,6 +48,10 @@ try {
 const sync = createSyncService(db);
 sync.start();
 
+// Automatic local backups.
+const backup = createBackupService(db);
+backup.start();
+
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
@@ -61,7 +66,7 @@ app.use(
 );
 
 mountAuthRoutes(app, db);
-mountApi(app, db, sync);
+mountApi(app, db, sync, backup);
 
 // Static assets (css / js / img).
 app.use('/assets', express.static(path.join(PUBLIC_DIR, 'assets'), { index: false }));
@@ -124,6 +129,9 @@ server.on('error', (error) => {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     server.close(() => {
+      // Take a final backup, then let sync settle before exiting.
+      const finalBackup = backup.stop();
+      if (finalBackup) console.log(`  backup   ${finalBackup.name} (shutdown)`);
       sync.stop().finally(() => process.exit(0));
     });
   });

@@ -132,6 +132,12 @@ export const TABLE_DEFS = [
       // unpaid | partial | paid
       { name: 'payment_status', type: 'string', length: 20, default: 'unpaid' },
       { name: 'subtotal_cents', type: 'int', default: 0 },
+      // Discount taken off the goods (never off the delivery fee).
+      { name: 'discount_cents', type: 'int', default: 0 },
+      // Display only, so a receipt can say "20% off". 0 when a flat amount was used.
+      { name: 'discount_percent', type: 'int', default: 0 },
+      // e.g. Senior citizen, PWD, Loyalty
+      { name: 'discount_reason', type: 'string', length: 60, nullable: true },
       { name: 'delivery_fee_cents', type: 'int', default: 0 },
       { name: 'total_cents', type: 'int', default: 0 },
       { name: 'amount_paid_cents', type: 'int', default: 0 },

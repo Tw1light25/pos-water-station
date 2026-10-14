@@ -43,6 +43,21 @@ export function paymentBadge(status) {
 const view = { orders: [], totals: {}, settings: null, status: '', payment: '', search: '' };
 let products = [];
 
+/** Read the discount controls into { cents, percent, label }. */
+function readDiscount(root, subtotal) {
+  const type = root.querySelector('#o-discount-type')?.value ?? 'none';
+  const raw = Number(root.querySelector('#o-discount-value')?.value) || 0;
+
+  if (type === 'percent') {
+    const percent = Math.max(0, Math.min(100, Math.round(raw)));
+    return { cents: Math.round((subtotal * percent) / 100), percent, label: `${percent}%` };
+  }
+  if (type === 'amount') {
+    return { cents: Math.max(0, Math.min(subtotal, toCents(raw))), percent: 0, label: 'flat' };
+  }
+  return { cents: 0, percent: 0, label: '' };
+}
+
 /* ------------------------------------------------------------ order builder */
 
 function openOrderModal(onDone) {
@@ -87,6 +102,33 @@ function openOrderModal(onDone) {
       <button class="btn btn--sm" type="button" id="o-add-item" style="margin-top: 8px">+ Add item</button>
     </div>
 
+    <div class="field">
+      <label class="field__label" for="o-discount-type">Discount</label>
+      <div class="row" style="gap: 8px">
+        <select class="select" id="o-discount-type" style="width: 158px">
+          <option value="none">No discount</option>
+          <option value="percent">Percent (%)</option>
+          <option value="amount">Flat amount (₱)</option>
+        </select>
+        <input class="input" id="o-discount-value" type="number" step="0.01" min="0" value="0"
+          style="width: 110px" disabled />
+        <input class="input" id="o-discount-reason" list="discount-reasons" placeholder="Reason (optional)"
+          style="flex: 1; min-width: 120px" />
+      </div>
+      <datalist id="discount-reasons">
+        <option value="Senior citizen"></option>
+        <option value="PWD"></option>
+        <option value="Loyalty"></option>
+        <option value="Wholesale"></option>
+      </datalist>
+      <div class="row" style="gap: 6px; margin-top: 8px">
+        <span class="muted" style="font-size: 11.5px">Quick:</span>
+        <button class="btn btn--sm" type="button" data-discount="5">5%</button>
+        <button class="btn btn--sm" type="button" data-discount="10">10%</button>
+        <button class="btn btn--sm" type="button" data-discount="20">20%</button>
+      </div>
+    </div>
+
     <div class="grid grid--2" style="gap: 0 14px">
       <div class="field" id="o-fee-field">
         <label class="field__label" for="o-fee">Delivery fee (₱)</label>
@@ -105,6 +147,7 @@ function openOrderModal(onDone) {
 
     <div class="card" style="background: var(--bg-elev); padding: 12px">
       <div class="row-between"><span class="muted">Subtotal</span><span id="o-subtotal">₱0.00</span></div>
+      <div class="row-between"><span class="muted" id="o-discount-label">Discount</span><span id="o-discount-view">₱0.00</span></div>
       <div class="row-between"><span class="muted">Delivery fee</span><span id="o-fee-view">₱0.00</span></div>
       <div class="row-between" style="margin-top: 6px; font-weight: 700; font-size: 15px">
         <span>Total</span><span id="o-total">₱0.00</span>
@@ -124,6 +167,12 @@ function openOrderModal(onDone) {
         label: 'Create order',
         className: 'btn--primary',
         onClick: async ({ close, modal: root }) => {
+          const subtotal = state.items.reduce((sum, item) => {
+            const product = products.find((p) => p.id === item.product_id);
+            return sum + (product?.price_cents ?? 0) * item.qty;
+          }, 0);
+          const discount = readDiscount(root, subtotal);
+
           const payload = {
             order_type: root.querySelector('#o-type').value,
             customer_name: root.querySelector('#o-name').value,
@@ -132,6 +181,9 @@ function openOrderModal(onDone) {
             save_customer: root.querySelector('#o-save').checked,
             delivery_fee_cents: toCents(root.querySelector('#o-fee').value),
             initial_payment_cents: toCents(root.querySelector('#o-payment').value),
+            discount_cents: discount.cents,
+            discount_percent: discount.percent,
+            discount_reason: root.querySelector('#o-discount-reason').value,
             note: root.querySelector('#o-note').value,
             items: state.items.filter((item) => item.product_id && item.qty > 0),
           };
@@ -140,9 +192,21 @@ function openOrderModal(onDone) {
             return;
           }
           try {
-            await post('/orders', payload);
+            const created = await post('/orders', payload);
             close();
-            toast('Order created');
+
+            // The server prices the order from the catalogue, not from this
+            // screen. If the two disagree, a price changed while the form was
+            // open - say so instead of letting the cashier give wrong change.
+            const fee = payload.order_type === 'delivery' ? payload.delivery_fee_cents : 0;
+            const previewTotal = subtotal - discount.cents + fee;
+            const savedTotal = Number(created?.order?.total_cents);
+
+            if (Number.isFinite(savedTotal) && savedTotal !== previewTotal) {
+              toast(`Prices had changed - this order was saved at ${peso(savedTotal)}`, 'error');
+            } else {
+              toast('Order created');
+            }
             onDone();
           } catch (error) {
             toast(error.message, 'error');
@@ -212,14 +276,21 @@ function openOrderModal(onDone) {
           const product = products.find((p) => p.id === item.product_id);
           return sum + (product?.price_cents ?? 0) * item.qty;
         }, 0);
+        const discount = readDiscount(root, subtotal);
         const fee = isDelivery ? toCents(root.querySelector('#o-fee').value) : 0;
-        const total = subtotal + fee;
+        const total = subtotal - discount.cents + fee;
 
         const cash = toCents(root.querySelector('#o-payment').value);
         const change = Math.max(0, cash - total);
         const shortfall = Math.max(0, total - cash);
 
         root.querySelector('#o-subtotal').textContent = peso(subtotal);
+        root.querySelector('#o-discount-label').textContent =
+          discount.percent > 0 ? `Discount (${discount.percent}%)` : 'Discount';
+        root.querySelector('#o-discount-view').textContent =
+          discount.cents > 0 ? `-${peso(discount.cents)}` : peso(0);
+        root.querySelector('#o-discount-view').style.color =
+          discount.cents > 0 ? 'var(--purple)' : 'inherit';
         root.querySelector('#o-fee-view').textContent = peso(fee);
         root.querySelector('#o-total').textContent = peso(total);
         root.querySelector('#o-change').textContent = peso(change);
@@ -234,6 +305,31 @@ function openOrderModal(onDone) {
       root.querySelector('#o-type').addEventListener('change', renderTotals);
       root.querySelector('#o-fee').addEventListener('input', renderTotals);
       root.querySelector('#o-payment').addEventListener('input', renderTotals);
+
+      const discountType = root.querySelector('#o-discount-type');
+      const discountValue = root.querySelector('#o-discount-value');
+
+      discountType.addEventListener('change', () => {
+        const chosen = discountType.value !== 'none';
+        discountValue.disabled = !chosen;
+        if (chosen && !(Number(discountValue.value) > 0)) {
+          discountValue.value = discountType.value === 'percent' ? 20 : '';
+        }
+        if (!chosen) discountValue.value = 0;
+        renderTotals();
+      });
+
+      discountValue.addEventListener('input', renderTotals);
+      root.querySelector('#o-discount-reason').addEventListener('input', renderTotals);
+
+      root.querySelectorAll('[data-discount]').forEach((button) => {
+        button.addEventListener('click', () => {
+          discountType.value = 'percent';
+          discountValue.disabled = false;
+          discountValue.value = button.dataset.discount;
+          renderTotals();
+        });
+      });
       root.querySelector('#o-add-item').addEventListener('click', () => {
         state.items.push({ product_id: products[0]?.id ?? '', qty: 1 });
         renderItems();
@@ -250,6 +346,11 @@ export async function openOrderDetail(id, onDone) {
   const data = await get(`/orders/${id}`);
   const { order, items, payments } = data;
   const balance = Number(order.total_cents) - Number(order.amount_paid_cents);
+
+  const discountAmount = Number(order.discount_cents) || 0;
+  const discountPercent = Number(order.discount_percent) || 0;
+  const discountType = discountPercent > 0 ? 'percent' : discountAmount > 0 ? 'amount' : 'none';
+  const discountValue = discountPercent > 0 ? discountPercent : plainAmount(discountAmount);
 
   modal({
     title: `Order ${order.id.slice(-6).toUpperCase()}`,
@@ -281,10 +382,43 @@ export async function openOrderDetail(id, onDone) {
 
       <div class="card" style="background: var(--bg-elev); padding: 12px">
         <div class="row-between"><span class="muted">Subtotal</span><span>${peso(order.subtotal_cents)}</span></div>
+        ${
+          Number(order.discount_cents) > 0
+            ? `<div class="row-between">
+                 <span class="muted">Discount${Number(order.discount_percent) > 0 ? ` (${order.discount_percent}%)` : ''}${order.discount_reason ? ` · ${escapeHtml(order.discount_reason)}` : ''}</span>
+                 <span style="color: var(--purple)">-${peso(order.discount_cents)}</span>
+               </div>`
+            : ''
+        }
         <div class="row-between"><span class="muted">Delivery fee</span><span>${peso(order.delivery_fee_cents)}</span></div>
         <div class="row-between" style="font-weight: 700; margin-top: 4px"><span>Total</span><span>${peso(order.total_cents)}</span></div>
         <div class="row-between"><span class="muted">Paid</span><span style="color: var(--green)">${peso(order.amount_paid_cents)}</span></div>
         ${balance > 0 ? `<div class="row-between"><span class="muted">Balance</span><span style="color: var(--red); font-weight: 600">${peso(balance)}</span></div>` : ''}
+      </div>
+
+      <div class="grid grid--4" style="gap: 0 14px; margin-top: 14px">
+        <div class="field">
+          <label class="field__label" for="d-discount-type">Discount</label>
+          <select class="select" id="d-discount-type">
+            <option value="none" ${discountType === 'none' ? 'selected' : ''}>None</option>
+            <option value="percent" ${discountType === 'percent' ? 'selected' : ''}>Percent (%)</option>
+            <option value="amount" ${discountType === 'amount' ? 'selected' : ''}>Flat (₱)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="d-discount-value">Value</label>
+          <input class="input" id="d-discount-value" type="number" step="0.01" min="0" value="${discountValue}" />
+        </div>
+        <div class="field" style="grid-column: span 2">
+          <label class="field__label" for="d-discount-reason">Reason</label>
+          <input class="input" id="d-discount-reason" list="discount-reasons-d" value="${escapeHtml(order.discount_reason ?? '')}" placeholder="Senior citizen, PWD, loyalty..." />
+          <datalist id="discount-reasons-d">
+            <option value="Senior citizen"></option>
+            <option value="PWD"></option>
+            <option value="Loyalty"></option>
+            <option value="Wholesale"></option>
+          </datalist>
+        </div>
       </div>
 
       ${
@@ -397,10 +531,24 @@ export async function openOrderDetail(id, onDone) {
 
       root.querySelector('[data-save-status]').addEventListener('click', async () => {
         const dueValue = root.querySelector('#d-due').value;
+
+        const type = root.querySelector('#d-discount-type').value;
+        const raw = Number(root.querySelector('#d-discount-value').value) || 0;
+        const percent = type === 'percent' ? Math.max(0, Math.min(100, Math.round(raw))) : 0;
+        const cents =
+          type === 'amount'
+            ? toCents(raw)
+            : type === 'percent'
+              ? Math.round((Number(order.subtotal_cents) * percent) / 100)
+              : 0;
+
         try {
           await put(`/orders/${order.id}`, {
             fulfillment_status: root.querySelector('#d-status').value,
             due_date: dueValue ? fromDateInput(dueValue) : null,
+            discount_percent: percent,
+            discount_cents: cents,
+            discount_reason: root.querySelector('#d-discount-reason').value,
           });
           toast('Order updated');
           close();
@@ -505,8 +653,13 @@ export async function render(container, ctx) {
   const summary = container.querySelector('#summary');
   const count = container.querySelector('#count');
 
-  async function loadProducts() {
-    if (products.length) return;
+  /**
+   * Product prices change, and this is a single-page app - so the list must be
+   * re-fetched rather than cached for the session, or the order form would show
+   * out-of-date prices (and calculate the wrong change).
+   */
+  async function loadProducts({ force = false } = {}) {
+    if (products.length && !force) return;
     const data = await get('/products');
     products = data.products;
   }
@@ -606,7 +759,9 @@ export async function render(container, ctx) {
     load();
   });
   container.querySelector('#add').addEventListener('click', async () => {
-    await loadProducts();
+    // Always re-read prices when opening the form - the catalogue may have
+    // changed since this screen was first opened.
+    await loadProducts({ force: true });
     if (!products.length) {
       toast('Add products first', 'error');
       return;
@@ -614,5 +769,7 @@ export async function render(container, ctx) {
     openOrderModal(load);
   });
 
+  // ...and once on every visit to the tab.
+  await loadProducts({ force: true });
   await load();
 }

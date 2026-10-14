@@ -29,7 +29,7 @@ Write-Host ''
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
 robocopy $ProjectRoot $stage /E /NFL /NDL /NJH /NJS `
-    /XD node_modules .git hide data `
+    /XD node_modules .git hide data backups `
     /XF .env '*.log' | Out-Null
 
 if ($LASTEXITCODE -ge 8) {
@@ -38,7 +38,7 @@ if ($LASTEXITCODE -ge 8) {
 }
 
 # Sanity checks - these must never end up in a client package.
-foreach ($forbidden in @('hide', 'data', '.env', 'node_modules')) {
+foreach ($forbidden in @('hide', 'data', 'backups', '.env', 'node_modules')) {
     if (Test-Path (Join-Path $stage $forbidden)) {
         Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
         throw "Refusing to package: '$forbidden' was copied into the staging folder."

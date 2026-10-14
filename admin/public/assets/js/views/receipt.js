@@ -95,6 +95,15 @@ export function printReceipt({ order, items, payments }, settings = {}) {
   </table>
   <div class="hr"></div>
   <div class="line"><span>Subtotal</span><span>${peso(order.subtotal_cents)}</span></div>
+  ${
+    Number(order.discount_cents) > 0
+      ? `<div class="line">
+           <span>Discount${Number(order.discount_percent) > 0 ? ` (${order.discount_percent}%)` : ''}</span>
+           <span>-${peso(order.discount_cents)}</span>
+         </div>
+         ${order.discount_reason ? `<div class="line"><span>&nbsp;&nbsp;${escapeHtml(order.discount_reason)}</span><span></span></div>` : ''}`
+      : ''
+  }
   ${order.delivery_fee_cents > 0 ? `<div class="line"><span>Delivery fee</span><span>${peso(order.delivery_fee_cents)}</span></div>` : ''}
   <div class="line total"><span>TOTAL</span><span>${peso(order.total_cents)}</span></div>
   <div class="line"><span>Paid</span><span>${peso(order.amount_paid_cents)}</span></div>

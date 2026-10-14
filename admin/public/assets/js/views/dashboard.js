@@ -131,6 +131,7 @@ export async function render(container, ctx) {
       ['Sales today', peso(data.kpis.sales_today_cents), 'var(--green)'],
       ['Sales this month', peso(data.kpis.sales_month_cents), 'var(--green)'],
       ['Outgoing this month', peso(data.kpis.outgoing_month_cents), 'var(--orange)'],
+      ['Discounts this month', peso(data.kpis.discount_month_cents), 'var(--purple)'],
       ['Outstanding', peso(data.kpis.outstanding_cents), data.kpis.outstanding_cents > 0 ? 'var(--red)' : 'var(--text)'],
       ['Pending orders', data.kpis.pending_orders, 'var(--blue)'],
       ['Low stock', data.kpis.low_stock, data.kpis.low_stock > 0 ? 'var(--yellow)' : 'var(--text)'],

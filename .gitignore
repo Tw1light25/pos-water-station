@@ -18,6 +18,9 @@ data/
 outbox.jsonl
 sync-state.json
 
+# Automatic backups hold real customer data - never push them
+backups/
+
 # Credentials folder kept by the owner
 hide/
 

@@ -111,6 +111,8 @@ Other useful commands:
 npm run db:print    # print the SQL without connecting
 npm run site:build  # copy shared modules into site/assets/shared/
 npm run check       # make sure no secrets would be pushed (run before pushing)
+npm run backup      # take a backup now (if anything changed)
+npm run restore     # restore a snapshot (see Automatic backups)
 npm run password    # reset a locked-out owner password
 ```
 
@@ -175,6 +177,91 @@ Fixes, in order of preference:
 
 The deploy log always names the file and line it objected to - read that first.
 
+## Discounts
+
+Set when the admin enters an order, and shown on the receipt:
+
+```
+Subtotal          ₱250.00
+Discount (20%)    -₱50.00
+Senior citizen
+Delivery fee       ₱20.00
+TOTAL             ₱220.00
+```
+
+- **Percent or flat amount**, with quick 5 / 10 / 20 % buttons and preset reasons
+  (Senior citizen, PWD, Loyalty, Wholesale) - or type your own
+- Applies to the **goods only**, never the delivery fee
+- **Clamped to the subtotal**, so a total can never go negative
+- **Editable afterwards** from the order detail, and removing it restores the full price
+- Paying the discounted total still marks the order **paid**; change/sukli follows the new total
+- Only the admin can apply one - the customer site is unaffected
+- **Dashboard -> "Discounts this month"** shows how much you have given away
+
+Stored on the order as `discount_cents` (the amount off), `discount_percent` (for
+display) and `discount_reason`.
+
+## Price history is immutable
+
+Changing a product's price affects **future orders only**. Every order line
+stores the name, unit and price it was **sold at**, so historical orders are
+financial records that never move:
+
+- `recalcOrder` sums the *stored* `line_total_cents`, never the products table
+- Replacing an order's items keeps the price each product was already sold at
+  and uses today's price only for newly added products
+- The product editor says so: *"Only affects future orders"*
+
+```
+npm run test:history -- <owner-password>
+```
+proves it: it takes an order, changes the product price, and asserts the order's
+line price, total, payments and status are untouched — while a new order does
+pick up the new price. It cleans up after itself.
+
+## Automatic backups
+
+A snapshot of the local database is written whenever something has actually
+changed - a quiet shop never produces a backup file.
+
+| Trigger | When |
+| --- | --- |
+| Every **20 transactions** | An order, payment, expense or new/edited customer counts as one |
+| Every **30 minutes** | Only if anything changed since the last backup |
+| **On startup** | Catches a previous session that ended without one (crash, power cut) |
+| **On shutdown** | Ctrl+C, `timeout`, or a service stop |
+
+Snapshots go to `backups/pos-<date>_<time>-<reason>.db` and use SQLite's
+`VACUUM INTO`, so they are complete, compact and safe to take mid-sale. The
+newest **30** are kept; older ones are deleted automatically.
+
+```bash
+npm run backup              # back up now, if anything changed
+npm run backup -- --force   # back up regardless
+npm run restore -- --list   # show the available snapshots
+npm run restore -- backups/pos-2026-10-14_135501-20txn.db
+```
+
+**Restoring:** stop the admin first. The restore keeps a safety copy of the
+current database, resets the sync marker, and the next start re-reads the whole
+cloud database - so any cloud row newer than the snapshot wins.
+
+**Settings -> Backups** shows the last backup, how many are kept, disk used, the
+newest snapshots, and a **Back up now** button.
+
+Tuning (all optional, defaults shown):
+
+```
+BACKUP_ENABLED=true
+BACKUP_EVERY_TRANSACTIONS=20
+BACKUP_INTERVAL_MINUTES=30
+BACKUP_KEEP=30
+# BACKUP_DIR=D:\POS Backups
+```
+
+`backups/` holds real customer data, so it is gitignored, rejected by
+`npm run check`, and excluded from the client ZIP.
+
 ## Project layout
 
 ```
@@ -201,11 +288,15 @@ Point Of Sale/
     mysql.js  passwords.js  tables.js
   scripts/
     db-init.js               # create + seed the database
+    backup.js  restore.js    # manual backup + disaster recovery
+    check-secrets.js         # pre-push guard
+    reset-password.js        # owner password recovery
     prepare-site.js          # copy browser-safe shared modules into site/
     site-dev.js              # local preview server for the customer site
   windows/                   # Windows installer + packaging (see above)
   Install.bat  Start POS.bat # double-click entry points for the client
   data/                      # generated: pos.db, outbox.jsonl, sync-state.json
+  backups/                   # generated: automatic snapshots (never pushed)
 ```
 
 ## Database

@@ -9,7 +9,10 @@
   },
   "scripts": {
     "admin": "node admin/server.js",
+    "backup": "node scripts/backup.js",
+    "restore": "node scripts/restore.js",
     "check": "node scripts/check-secrets.js",
+    "test:history": "node scripts/test-price-history.js",
     "password": "node scripts/reset-password.js",
     "site:build": "node scripts/prepare-site.js",
     "site:dev": "node scripts/prepare-site.js && node scripts/site-dev.js",

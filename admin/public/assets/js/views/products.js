@@ -54,6 +54,11 @@ function openProductModal(existing, onSaved) {
         <label class="field__label" for="p-price">Price (₱)</label>
         <input class="input" id="p-price" type="number" step="0.01" min="0"
           value="${plainAmount(existing?.price_cents ?? 0)}" />
+        ${
+          isEdit
+            ? '<span class="field__hint">Only affects future orders — past orders keep the price they were sold at.</span>'
+            : ''
+        }
       </div>
       <div class="field">
         <label class="field__label" for="p-reorder">Low-stock level</label>

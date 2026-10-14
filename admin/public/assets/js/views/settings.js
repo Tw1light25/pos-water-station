@@ -4,8 +4,8 @@
  * automatic open/closed status.
  */
 
-import { put } from '../api.js';
-import { escapeHtml, toCents, plainAmount, toast, withSpinner } from '../ui.js';
+import { get, post, put } from '../api.js';
+import { escapeHtml, formatDate, toCents, plainAmount, toast, withSpinner } from '../ui.js';
 import { normalizeHours, computeStoreStatus, describeStatus, formatTime12 } from '/shared/store-status.js';
 
 const DAYS = [
@@ -173,6 +173,17 @@ export async function render(container, { state, refreshShell }) {
       <div class="row" style="justify-content: flex-end">
         <button class="btn btn--primary" type="button" id="pw-save">Change password</button>
       </div>
+    </section>
+
+    <section class="card" style="margin-top: 16px">
+      <div class="card__head">
+        <div>
+          <h3 class="card__title">Backups</h3>
+          <span class="card__hint">Automatic safety copies of this PC's data</span>
+        </div>
+        <button class="btn btn--sm btn--primary" type="button" id="backup-now">Back up now</button>
+      </div>
+      <div id="backup-body"><div class="skeleton" style="height: 90px"></div></div>
     </section>`;
 
   const form = container.querySelector('#settings-form');
@@ -280,6 +291,112 @@ export async function render(container, { state, refreshShell }) {
       restore();
     }
   });
+
+  // Backups: status + a manual snapshot.
+  const backupBody = container.querySelector('#backup-body');
+  const backupButton = container.querySelector('#backup-now');
+
+  const ago = (ts) => {
+    if (!ts) return 'never';
+    const minutes = Math.round((Date.now() - ts) / 60_000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.round(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  };
+
+  const sizeLabel = (bytes) => {
+    const value = Number(bytes) || 0;
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  async function loadBackups() {
+    try {
+      const { backup } = await get('/backup');
+
+      if (!backup.enabled) {
+        backupBody.innerHTML = '<p class="muted">Automatic backups are switched off (BACKUP_ENABLED=false).</p>';
+        return;
+      }
+
+      const stats = [
+        ['Last backup', ago(backup.lastBackupAt)],
+        ['Snapshots kept', `${backup.count} of ${backup.keep}`],
+        ['Disk used', sizeLabel(backup.totalBytes)],
+        ['Since last backup', `${backup.changesSince} change(s)`],
+      ];
+
+      backupBody.innerHTML = `
+        <div class="grid grid--4">
+          ${stats
+            .map(
+              ([label, value]) => `
+            <div><div class="stat">
+              <span class="stat__label">${label}</span>
+              <span class="stat__value" style="font-size: 17px">${value}</span>
+            </div></div>`,
+            )
+            .join('')}
+        </div>
+
+        ${
+          backup.lastError
+            ? `<div class="alert alert--error" style="margin-top: 14px">Last backup failed: ${escapeHtml(backup.lastError)}</div>`
+            : ''
+        }
+
+        <p class="field__hint" style="margin-top: 14px">
+          Writes a snapshot after every ${backup.everyTransactions} transactions,
+          or every ${backup.intervalMinutes} minutes if anything changed — and when the
+          admin starts or stops. Nothing new means no new file.
+        </p>
+
+        ${
+          backup.recent.length
+            ? `<div class="table-wrap" style="margin-top: 10px">
+                 <table class="table">
+                   <thead><tr><th>Snapshot</th><th>When</th><th class="num">Size</th></tr></thead>
+                   <tbody>${backup.recent
+                     .map(
+                       (file) => `<tr>
+                         <td class="mono" style="font-size: 12px">${escapeHtml(file.name)}</td>
+                         <td class="muted">${formatDate(file.at, true)}</td>
+                         <td class="num">${sizeLabel(file.size)}</td>
+                       </tr>`,
+                     )
+                     .join('')}</tbody>
+                 </table>
+               </div>`
+            : '<p class="muted" style="margin-top: 10px">No snapshots yet — the first one is written as soon as there is something to save.</p>'
+        }
+
+        <p class="field__hint" style="margin-top: 10px">
+          Folder: <span class="mono">${escapeHtml(backup.directory)}</span>
+        </p>`;
+    } catch (error) {
+      backupBody.innerHTML = `<p style="color: var(--red)">${escapeHtml(error.message)}</p>`;
+    }
+  }
+
+  backupButton.addEventListener('click', async () => {
+    const restore = withSpinner(backupButton, 'Saving');
+    try {
+      const data = await post('/backup/now');
+      toast(`Backup written: ${data.result.name} (${data.result.sizeLabel})`);
+      await loadBackups();
+    } catch (error) {
+      toast(error.message, 'error');
+      await loadBackups();
+    } finally {
+      restore();
+    }
+  });
+
+  await loadBackups();
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();

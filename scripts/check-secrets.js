@@ -43,7 +43,7 @@ function trackedFiles() {
 
 /** Fallback for non-git folders: walk the tree, skipping generated folders. */
 function walkFiles(dir, base = '') {
-  const skip = new Set(['node_modules', '.git', 'data', 'hide']);
+  const skip = new Set(['node_modules', '.git', 'data', 'hide', 'backups']);
   const found = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (skip.has(entry.name)) continue;
@@ -86,6 +86,7 @@ const FORBIDDEN = [
   [/\.pem$/i, 'certificate (.pem)'],
   [/^data\//, 'local database folder'],
   [/^hide\//, 'credentials folder'],
+  [/^backups\//, 'backup folder (contains customer data)'],
   [/^node_modules\//, 'installed dependencies'],
   [/^\.env$/, '.env file'],
   [/^\.env\.(local|development|production)$/, 'environment file'],

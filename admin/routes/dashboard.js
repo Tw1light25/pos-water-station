@@ -41,7 +41,8 @@ export function mountDashboardRoutes(api, db) {
       .all(cutoff);
     const orders = db
       .prepare(
-        'SELECT total_cents, amount_paid_cents, payment_status, fulfillment_status FROM orders WHERE deleted_at IS NULL',
+        'SELECT total_cents, amount_paid_cents, discount_cents, placed_at, payment_status, fulfillment_status ' +
+          'FROM orders WHERE deleted_at IS NULL',
       )
       .all();
 
@@ -94,6 +95,13 @@ export function mountDashboardRoutes(api, db) {
       ['pending', 'out_for_delivery'].includes(o.fulfillment_status),
     ).length;
 
+    // How much the owner gave away this month.
+    const discountsThisMonth = sum(
+      orders
+        .filter((o) => monthKey(Number(o.placed_at) || 0, timezone) === thisMonth)
+        .map((o) => Number(o.discount_cents) || 0),
+    );
+
     const lowStockItems = db
       .prepare(
         `SELECT p.id, p.name, p.unit, p.reorder_level, ${ON_HAND} AS on_hand
@@ -111,6 +119,7 @@ export function mountDashboardRoutes(api, db) {
         sales_month_cents: salesMonth,
         outgoing_month_cents: outgoingThisMonth,
         outstanding_cents: outstanding,
+        discount_month_cents: discountsThisMonth,
         pending_orders: pendingOrders,
         low_stock: lowStockItems.length,
       },

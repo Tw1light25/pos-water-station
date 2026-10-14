@@ -37,25 +37,45 @@ export function getPayments(db, orderId) {
     .all(orderId);
 }
 
-/** Recompute subtotal / total / paid / payment status from items + payments. */
+/** Recompute subtotal / discount / total / paid / payment status from items + payments. */
 export function recalcOrder(db, orderId) {
   const order = getOrder(db, orderId);
   if (!order) return null;
 
   const items = getItems(db, orderId);
+  // Reads the price each line was SOLD at (stored on the line). Never re-price
+  // an existing order from the products table - that would rewrite history.
   const subtotal = items.reduce((sum, item) => sum + Number(item.line_total_cents ?? 0), 0);
+
+  // The discount comes off the goods only and can never exceed them, so a
+  // total can never go negative. Store the clamped value back.
+  const discount = Math.max(0, Math.min(Math.round(Number(order.discount_cents ?? 0)), subtotal));
   const deliveryFee = Number(order.delivery_fee_cents ?? 0);
-  const total = subtotal + deliveryFee;
+  const total = subtotal - discount + deliveryFee;
+
   const payments = getPayments(db, orderId);
   const paid = payments.reduce((sum, payment) => sum + Number(payment.amount_cents ?? 0), 0);
 
   const paymentStatus = paid <= 0 ? 'unpaid' : paid < total ? 'partial' : 'paid';
 
   db.prepare(
-    'UPDATE orders SET subtotal_cents = ?, total_cents = ?, amount_paid_cents = ?, payment_status = ?, updated_at = ? WHERE id = ?',
-  ).run(subtotal, total, paid, paymentStatus, Date.now(), orderId);
+    'UPDATE orders SET subtotal_cents = ?, discount_cents = ?, total_cents = ?, amount_paid_cents = ?, ' +
+      'payment_status = ?, updated_at = ? WHERE id = ?',
+  ).run(subtotal, discount, total, paid, paymentStatus, Date.now(), orderId);
 
   return getOrder(db, orderId);
+}
+
+/** Normalise the discount fields coming from the client. */
+function readDiscountFields(source) {
+  const percent = Math.round(Number(source.discount_percent) || 0);
+  return {
+    discount_cents: Math.max(0, Math.round(Number(source.discount_cents) || 0)),
+    discount_percent: Math.max(0, Math.min(100, percent)),
+    discount_reason: source.discount_reason
+      ? String(source.discount_reason).trim().slice(0, 60) || null
+      : null,
+  };
 }
 
 /** Put stock back by soft-deleting an order's sale ledger rows. */
@@ -129,7 +149,19 @@ function resolveCustomer(db, body) {
   return null;
 }
 
-function buildItems(db, orderId, rawItems) {
+/**
+ * Snapshot an order's lines.
+ *
+ * IMPORTANT - order lines are financial history. The unit price is COPIED onto
+ * the line and never looked up again, so changing a product's price can never
+ * alter what a customer was already charged. `recalcOrder` reads these stored
+ * values too, so nothing downstream re-derives an old total from the catalogue.
+ *
+ * `soldPrices` (optional Map of product_id -> unit_price_cents) lets a caller
+ * preserve the price a line was originally sold at - used when an order's items
+ * are replaced. Anything missing from it is priced at today's catalogue.
+ */
+function buildItems(db, orderId, rawItems, soldPrices = null) {
   const now = Date.now();
   const created = [];
   for (const raw of rawItems) {
@@ -142,7 +174,9 @@ function buildItems(db, orderId, rawItems) {
       .get(productId);
     if (!product) continue;
 
-    const unitPrice = Number(product.price_cents ?? 0);
+    const unitPrice = soldPrices?.has(productId)
+      ? soldPrices.get(productId)
+      : Number(product.price_cents ?? 0);
     const item = {
       id: ulid(),
       order_id: orderId,
@@ -260,6 +294,7 @@ export function mountOrderRoutes(api, db) {
       fulfillment_status: FULFILLMENT.has(body.fulfillment_status) ? body.fulfillment_status : 'pending',
       payment_status: 'unpaid',
       subtotal_cents: 0,
+      ...readDiscountFields(body),
       delivery_fee_cents: orderType === 'delivery' ? Math.round(Number(body.delivery_fee_cents) || 0) : 0,
       total_cents: 0,
       amount_paid_cents: 0,
@@ -275,9 +310,10 @@ export function mountOrderRoutes(api, db) {
 
     db.prepare(
       'INSERT INTO orders (id, customer_id, customer_name, customer_phone, order_type, source, is_preorder, ' +
-        'fulfillment_status, payment_status, subtotal_cents, delivery_fee_cents, total_cents, amount_paid_cents, ' +
-        'due_date, address, note, placed_at, delivered_at, created_at, updated_at, deleted_at) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL)',
+        'fulfillment_status, payment_status, subtotal_cents, discount_cents, discount_percent, discount_reason, ' +
+        'delivery_fee_cents, total_cents, amount_paid_cents, due_date, address, note, placed_at, delivered_at, ' +
+        'created_at, updated_at, deleted_at) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL)',
     ).run(
       order.id,
       order.customer_id,
@@ -289,6 +325,9 @@ export function mountOrderRoutes(api, db) {
       order.fulfillment_status,
       order.payment_status,
       order.subtotal_cents,
+      order.discount_cents,
+      order.discount_percent,
+      order.discount_reason,
       order.delivery_fee_cents,
       order.total_cents,
       order.amount_paid_cents,
@@ -359,10 +398,19 @@ export function mountOrderRoutes(api, db) {
       next.delivery_fee_cents =
         next.order_type === 'delivery' ? Math.round(Number(body.delivery_fee_cents) || 0) : 0;
     }
+    if (
+      body.discount_cents !== undefined ||
+      body.discount_percent !== undefined ||
+      body.discount_reason !== undefined
+    ) {
+      // Merge the incoming values over the current ones, then normalise.
+      Object.assign(next, readDiscountFields({ ...next, ...body }));
+    }
 
     db.prepare(
       'UPDATE orders SET customer_name = ?, customer_phone = ?, order_type = ?, is_preorder = ?, ' +
-        'fulfillment_status = ?, delivery_fee_cents = ?, due_date = ?, address = ?, note = ?, delivered_at = ?, updated_at = ? ' +
+        'fulfillment_status = ?, delivery_fee_cents = ?, discount_cents = ?, discount_percent = ?, ' +
+        'discount_reason = ?, due_date = ?, address = ?, note = ?, delivered_at = ?, updated_at = ? ' +
         'WHERE id = ?',
     ).run(
       next.customer_name,
@@ -371,6 +419,9 @@ export function mountOrderRoutes(api, db) {
       next.is_preorder,
       next.fulfillment_status,
       next.delivery_fee_cents,
+      next.discount_cents ?? 0,
+      next.discount_percent ?? 0,
+      next.discount_reason ?? null,
       next.due_date,
       next.address,
       next.note,
@@ -382,6 +433,17 @@ export function mountOrderRoutes(api, db) {
     if (Array.isArray(body.items) && body.items.length) {
       const now = Date.now();
       const oldItems = getItems(db, existing.id);
+
+      // Keep the price each product was ALREADY sold at on this order, so
+      // replacing the lines cannot rewrite what the customer was charged.
+      // Products not previously on the order are priced at today's catalogue.
+      const soldPrices = new Map();
+      for (const item of oldItems) {
+        if (item.product_id && !soldPrices.has(item.product_id)) {
+          soldPrices.set(item.product_id, Number(item.unit_price_cents) || 0);
+        }
+      }
+
       db.prepare('UPDATE order_items SET deleted_at = ?, updated_at = ? WHERE order_id = ? AND deleted_at IS NULL').run(
         now,
         now,
@@ -390,7 +452,7 @@ export function mountOrderRoutes(api, db) {
       for (const item of oldItems) {
         recordDelete('order_items', { ...item, deleted_at: now, updated_at: now });
       }
-      buildItems(db, existing.id, body.items);
+      buildItems(db, existing.id, body.items, soldPrices);
     }
 
     const saved = recalcOrder(db, existing.id);
