@@ -194,10 +194,35 @@ async function loadSettings() {
       document.getElementById('business-name').textContent = state.settings.business_name;
       document.title = `${state.settings.business_name} - POS`;
     }
+    renderBrand();
     refreshStatus();
   } catch {
     /* keep the shell usable even if settings fail */
   }
+}
+
+/**
+ * The brand mark: the logo set in Settings, else the bundled logo, else the
+ * built-in droplet. Falls back gracefully rather than showing a broken image.
+ */
+function renderBrand() {
+  const host = document.getElementById('sidebar-logo');
+  if (!host) return;
+  const url = state.settings?.logo_url || '/assets/img/logo.jpg';
+
+  host.innerHTML = '';
+  const img = document.createElement('img');
+  img.alt = '';
+  img.src = url;
+  img.addEventListener('error', () => {
+    if (img.dataset.fallback) {
+      host.innerHTML = LOGO; // last resort: the built-in droplet
+      return;
+    }
+    img.dataset.fallback = '1';
+    img.src = '/assets/img/logo.jpg';
+  });
+  host.appendChild(img);
 }
 
 /* ------------------------------------------------------------------- boot */

@@ -201,6 +201,38 @@ TOTAL             ₱220.00
 Stored on the order as `discount_cents` (the amount off), `discount_percent` (for
 display) and `discount_reason`.
 
+## Branding / logo
+
+The logo is **bundled**, not hot-linked, and lives in both halves of the app:
+
+```
+admin/public/assets/img/logo.jpg    512x512, served at /assets/img/logo.jpg
+site/assets/img/logo.jpg            the same file, for the customer site
+admin/public/assets/favicon.png     browser tab icon (64x64)
+site/assets/favicon.png
+windows/pos.ico                     desktop shortcut icon (5 sizes)
+```
+
+`settings.logo_url` is set to the **relative** path `/assets/img/logo.jpg`, so
+the same value works on `http://127.0.0.1:3000` and on your Netlify domain.
+
+It appears on: the admin **login page**, the admin **sidebar**, the customer
+**landing / order / track** headers, and the **printed receipt**.
+
+- To use a different image: **Settings -> Business identity -> Logo image URL**
+  (any URL works), or replace `logo.jpg` with your own file.
+- To rebuild the derivatives from a new master image:
+  ```bash
+  magick master.jpg -resize 512x512 -quality 85 -strip admin/public/assets/img/logo.jpg
+  cp admin/public/assets/img/logo.jpg site/assets/img/logo.jpg
+  magick master.jpg -resize 64x64 -strip admin/public/assets/favicon.png
+  cp admin/public/assets/favicon.png site/assets/favicon.png
+  magick master.jpg -resize 256x256 -define icon:auto-resize=256,64,48,32,16 -strip windows/pos.ico
+  ```
+- **Do not paste a Facebook/CDN image link into the logo field.** Those are
+  signed, expiring URLs: the one originally used here stopped working a few days
+  later and would have quietly broken the logo on the customer site.
+
 ## Price history is immutable
 
 Changing a product's price affects **future orders only**. Every order line

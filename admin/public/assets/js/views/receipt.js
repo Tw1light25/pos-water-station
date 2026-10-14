@@ -12,6 +12,8 @@ export function printReceipt({ order, items, payments }, settings = {}) {
   }
 
   const balance = Number(order.total_cents) - Number(order.amount_paid_cents);
+  // Absolute URL: the receipt is a separate window, where a relative path can fail.
+  const logoUrl = new URL(settings.logo_url || '/assets/img/logo.jpg', window.location.origin).href;
   const rows = items
     .map(
       (item) => `
@@ -63,6 +65,15 @@ export function printReceipt({ order, items, payments }, settings = {}) {
       width: 300px;
     }
     h1 { font-size: 15px; margin: 0 0 2px; text-align: center; }
+    img.logo {
+      display: block;
+      width: 88px;
+      height: 88px;
+      object-fit: contain;
+      margin: 0 auto 6px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
     .muted { text-align: center; font-size: 11px; margin: 0; }
     .hr { border-top: 1px dashed #000; margin: 8px 0; }
     .line { display: flex; justify-content: space-between; gap: 8px; }
@@ -78,6 +89,7 @@ export function printReceipt({ order, items, payments }, settings = {}) {
   </style>
 </head>
 <body>
+  <img class="logo" src="${logoUrl}" alt="" onerror="this.style.display='none'" />
   <h1>${escapeHtml(settings.business_name ?? 'Water Station')}</h1>
   ${settings.address ? `<p class="muted">${escapeHtml(settings.address)}</p>` : ''}
   ${settings.phone ? `<p class="muted">${escapeHtml(settings.phone)}</p>` : ''}

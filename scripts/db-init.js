@@ -110,9 +110,20 @@ async function seedSettings(db) {
   const business = process.env.BUSINESS_NAME || 'Water Station';
   await db.query(
     `INSERT INTO settings
-       (id, business_name, currency, delivery_fee_cents, store_override, timezone, hours_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [ulid(), business, 'PHP', 0, 'auto', 'Asia/Manila', JSON.stringify(DEFAULT_HOURS), now, now],
+       (id, business_name, logo_url, currency, delivery_fee_cents, store_override, timezone, hours_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      ulid(),
+      business,
+      '/assets/img/logo.jpg',
+      'PHP',
+      0,
+      'auto',
+      'Asia/Manila',
+      JSON.stringify(DEFAULT_HOURS),
+      now,
+      now,
+    ],
   );
   return { created: true, business };
 }
