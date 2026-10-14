@@ -9,6 +9,7 @@
   },
   "scripts": {
     "admin": "node admin/server.js",
+    "check": "node scripts/check-secrets.js",
     "password": "node scripts/reset-password.js",
     "site:build": "node scripts/prepare-site.js",
     "site:dev": "node scripts/prepare-site.js && node scripts/site-dev.js",

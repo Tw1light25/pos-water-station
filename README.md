@@ -110,6 +110,8 @@ Other useful commands:
 ```bash
 npm run db:print    # print the SQL without connecting
 npm run site:build  # copy shared modules into site/assets/shared/
+npm run check       # make sure no secrets would be pushed (run before pushing)
+npm run password    # reset a locked-out owner password
 ```
 
 ## Deploying the customer site to Netlify
@@ -129,13 +131,35 @@ npm run site:build  # copy shared modules into site/assets/shared/
    | `DB_USER` | your TiDB user |
    | `DB_PASS` | your TiDB password |
    | `DB_NAME` | `pos-water-station` |
-   | `DB_CA_CERT` | the contents of `ca.pem` (use `\n` for newlines) |
+   | `DB_SSL` | `true` |
+
+   That is enough: the connection is encrypted without verifying the server
+   certificate. To verify it as well, also add `DB_CA_CERT` containing the text
+   of `certs/ca.pem` with `\n` in place of newlines -
+   `sed ':a;N;$!ba;s/\n/\\n/g' certs/ca.pem`.
 
 5. Deploy. The site is available at your Netlify URL; the API lives at
    `/api/settings`, `/api/products`, `/api/orders` and `/api/track`.
 
 The TiDB IP allowlist must include `0.0.0.0/0` (or Netlify's ranges) for the
 functions to connect.
+
+### "Build failed - exposed secrets"
+
+Netlify's smart secret scanning reads your repository before publishing and
+**fails the build** if it finds something that looks like a credential. It keys
+off content, not file names, so even a commented-out placeholder can trip it -
+the usual culprit is a line containing a certificate header (a PEM marker).
+
+- Run **`npm run check`** before pushing: it fails on PEM markers, on tracked
+  `.env`/`.pem`/`data/`/`hide/` files, and on your real password leaking out
+- `netlify.toml` already lists those paths in `SECRETS_SCAN_OMIT_PATHS`
+- Only ever add the real credentials in Netlify's **Environment variables**, never
+  in a file that is committed
+
+If a genuine false positive remains, either safelist the exact value with
+`SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES`, or set
+`SECRETS_SCAN_SMART_DETECTION_ENABLED=false` to turn smart detection off.
 
 ## Project layout
 

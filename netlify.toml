@@ -8,6 +8,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Netlify's smart secret scanning reads repo code before publishing. These
+  # paths are never part of the deployed site and only ever hold placeholders.
+  SECRETS_SCAN_OMIT_PATHS = ".env.example,certs/,data/,hide/"
 
 # Explicit page routes, so the site does not depend on pretty-URL behaviour.
 [[redirects]]
