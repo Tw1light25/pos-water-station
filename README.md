@@ -233,6 +233,69 @@ It appears on: the admin **login page**, the admin **sidebar**, the customer
   signed, expiring URLs: the one originally used here stopped working a few days
   later and would have quietly broken the logo on the customer site.
 
+## Categories
+
+Products and expenses each have their own **pick list**:
+
+```
+Category   [ Refill                                     ▾ ]   [ Manage ]
+```
+
+**Manage** opens a small window where the list is edited:
+
+```
+Product categories
+  [ New category name…              ]   [ Add ]
+
+  Category                     Actions
+  Refill                       Rename  Delete
+  Container                    Rename  Delete
+
+                                      [ Close ]
+```
+
+- Pick a category from the dropdown - no free typing
+- **Add** at the top of the window (Enter works too)
+- **Rename** edits the row in place and **updates every product/expense using
+  that name**; if it was the one you had selected, the dropdown follows it
+- **Delete** is refused while anything still uses it, and says how many do
+- The two lists are **independent** - `Refill` never appears under expenses, and
+  `rent` never under products
+- Anything already in use is picked up automatically, so nothing is lost
+- Closing the window refreshes the dropdown and the list behind it
+
+Fresh installs are seeded with `Refill · Container · Bottled · Accessory` for
+products and `general · maintenance · rent · utilities · supplies · salary ·
+transport · equipment` for expenses.
+
+> Note: the **Refill → "don't track stock"** rule matches the literal name
+> `Refill`. If you rename that category, new products in it default to tracked
+> again (existing products keep their own setting).
+
+## Stock tracking
+
+Not everything you sell is stock. A **refill** is a service - the customer brings
+their own container - so counting it makes no sense. Each product has a
+**Track stock** switch:
+
+- **On** (default) - counted, capped at the quantity on hand, can run out
+- **Off** - never counted, never capped, never "out of stock", and no stock
+  ledger entries are written when it is sold
+
+Choosing the **Refill** category in the product editor flips the switch off
+automatically; anything else flips it on. It stays overridable - flip it back
+and save if you want a "Refill" item counted anyway.
+
+Untracked products:
+
+- are **hidden from the Inventory tab** (that tab means "things we count")
+- are ignored by **low-stock alerts** and the stock-value totals
+- show **"Not tracked"** instead of a stock badge on the Products tab
+- can't be given a stock movement (receive/adjust is refused with a message)
+
+Their old ledger history is kept but ignored, so switching tracking back on
+would restore whatever was counted before.
+
 ## Price history is immutable
 
 Changing a product's price affects **future orders only**. Every order line

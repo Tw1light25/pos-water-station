@@ -106,7 +106,7 @@ export function mountDashboardRoutes(api, db) {
       .prepare(
         `SELECT p.id, p.name, p.unit, p.reorder_level, ${ON_HAND} AS on_hand
          FROM products p
-         WHERE p.deleted_at IS NULL AND p.active = 1 AND p.reorder_level > 0
+         WHERE p.deleted_at IS NULL AND p.active = 1 AND p.track_stock = 1 AND p.reorder_level > 0
            AND ${ON_HAND} <= p.reorder_level
          ORDER BY on_hand ASC LIMIT 8`,
       )

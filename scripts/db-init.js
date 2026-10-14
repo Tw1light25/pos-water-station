@@ -13,6 +13,7 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { TABLE_DEFS } from '../shared/schema.js';
 import { PROJECT_ROOT } from '../shared/paths.js';
+import { DEFAULT_CATEGORY_NAMES } from '../shared/categories.js';
 import { mysqlStatements, renderMySQL } from '../shared/dialects.js';
 import { ensureMysqlColumns } from '../shared/migrate.js';
 import { createConnection, describeTarget } from '../shared/mysql.js';
@@ -158,13 +159,41 @@ async function seedProducts(db) {
 
   const now = Date.now();
   for (const product of SAMPLE_PRODUCTS) {
+    // Refills are a service, not stock.
+    const trackStock = String(product.category ?? '').trim().toLowerCase() === 'refill' ? 0 : 1;
+
     await db.query(
-      `INSERT INTO products (id, name, unit, category, price_cents, active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [ulid(), product.name, product.unit, product.category, product.price_cents, 1, now, now],
+      `INSERT INTO products (id, name, unit, category, price_cents, active, track_stock, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [ulid(), product.name, product.unit, product.category, product.price_cents, 1, trackStock, now, now],
     );
   }
   return { created: true, count: SAMPLE_PRODUCTS.length };
+}
+
+async function seedCategories(db) {
+  const now = Date.now();
+  let created = 0;
+
+  for (const [kind, names] of Object.entries(DEFAULT_CATEGORY_NAMES)) {
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index];
+      const existing = await firstRow(
+        db,
+        'SELECT id FROM categories WHERE kind = ? AND LOWER(name) = LOWER(?)',
+        [kind, name],
+      );
+      if (existing) continue;
+
+      await db.query(
+        'INSERT INTO categories (id, kind, name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [ulid(), kind, name, index + 1, now, now],
+      );
+      created += 1;
+    }
+  }
+
+  return { created };
 }
 
 async function printSummary(db) {
@@ -203,6 +232,7 @@ async function main() {
     const settings = await seedSettings(db);
     const owner = await seedOwner(db);
     const products = await seedProducts(db);
+    const categories = await seedCategories(db);
 
     section('Seeding');
     console.log(
@@ -216,6 +246,11 @@ async function main() {
         : products.skipped
           ? '  Products        seeding skipped (SEED_PRODUCTS=false)'
           : '  Products        already present, left untouched',
+    );
+    console.log(
+      categories.created
+        ? `  Categories      ${categories.created} starter categor(ies) inserted`
+        : '  Categories      already present, left untouched',
     );
 
     if (owner.created) {

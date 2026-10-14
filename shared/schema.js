@@ -74,9 +74,31 @@ export const TABLE_DEFS = [
       { name: 'price_cents', type: 'int', default: 0 },
       { name: 'reorder_level', type: 'int', default: 0 },
       { name: 'active', type: 'bool', default: 1 },
+      // Refills are a service, not stock. Products with this off are never
+      // counted, never run out, and get no stock ledger rows.
+      { name: 'track_stock', type: 'bool', default: 1 },
       ...audit(),
     ],
     indexes: [{ name: 'idx_products_active', columns: ['active'] }],
+  },
+
+  // ------------------------------------------------- category pick lists
+  // Two independent lists share one table, separated by `kind`:
+  //   kind = 'product'  -> the catalogue (Refill, Container, ...)
+  //   kind = 'expense'  -> business expenses (maintenance, rent, ...)
+  {
+    name: 'categories',
+    columns: [
+      id(),
+      { name: 'kind', type: 'string', length: 20, default: 'product' },
+      { name: 'name', type: 'string', length: 60 },
+      { name: 'sort_order', type: 'int', default: 0 },
+      ...audit(),
+    ],
+    indexes: [
+      { name: 'uk_categories_kind_name', columns: ['kind', 'name'], unique: true },
+      { name: 'idx_categories_kind', columns: ['kind'] },
+    ],
   },
 
   // ------------------------------------------- stock ledger (append-only)

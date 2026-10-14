@@ -15,11 +15,11 @@ const REASONS = ['receive', 'sale', 'adjustment', 'return', 'damage', 'initial']
 function stockRows(db) {
   return db
     .prepare(
-      `SELECT p.id, p.name, p.unit, p.category, p.price_cents, p.reorder_level, p.active,
+      `SELECT p.id, p.name, p.unit, p.category, p.price_cents, p.reorder_level, p.active, p.track_stock,
               COALESCE((SELECT SUM(l.change_qty) FROM inventory_logs l
                         WHERE l.product_id = p.id AND l.deleted_at IS NULL), 0) AS on_hand
        FROM products p
-       WHERE p.deleted_at IS NULL
+       WHERE p.deleted_at IS NULL AND p.track_stock = 1
        ORDER BY p.name COLLATE NOCASE`,
     )
     .all()
@@ -84,9 +84,14 @@ export function mountInventoryRoutes(api, db) {
     if (!changeQty) return res.status(400).json({ error: 'Quantity change cannot be zero.' });
 
     const product = db
-      .prepare('SELECT id, name FROM products WHERE id = ? AND deleted_at IS NULL')
+      .prepare('SELECT id, name, track_stock FROM products WHERE id = ? AND deleted_at IS NULL')
       .get(productId);
     if (!product) return res.status(404).json({ error: 'Product not found.' });
+    if (Number(product.track_stock) !== 1) {
+      return res
+        .status(400)
+        .json({ error: `${product.name} is not stock-tracked (a refill or a service).` });
+    }
 
     const reason = REASONS.includes(body.reason) ? body.reason : 'adjustment';
     const log = insertInventoryLog(db, {

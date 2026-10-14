@@ -108,6 +108,11 @@ export function syncSaleStock(db, order) {
   if (shouldDeduct && !Number(active?.n ?? 0)) {
     for (const item of getItems(db, order.id)) {
       if (!item.product_id) continue;
+
+      // Refills and anything else not stock-tracked never touch the ledger.
+      const product = db.prepare('SELECT track_stock FROM products WHERE id = ?').get(item.product_id);
+      if (!product || Number(product.track_stock) !== 1) continue;
+
       insertInventoryLog(db, {
         productId: item.product_id,
         changeQty: -Math.abs(Number(item.qty) || 0),

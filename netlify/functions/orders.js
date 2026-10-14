@@ -72,7 +72,7 @@ export default handler(async (request) => {
   if (!wantedIds.length) return fail('Please add at least one item.');
 
   const products = await query(
-    `SELECT p.id, p.name, p.unit, p.price_cents,
+    `SELECT p.id, p.name, p.unit, p.price_cents, p.track_stock,
             COALESCE((SELECT SUM(l.change_qty) FROM inventory_logs l
                       WHERE l.product_id = p.id AND l.deleted_at IS NULL), 0) AS on_hand
      FROM products p
@@ -91,15 +91,20 @@ export default handler(async (request) => {
     const qty = Math.max(1, Math.min(999, Math.round(Number(raw.qty) || 0)));
     if (!product || !qty) continue;
 
-    // Never sell beyond what is on hand.
+    // Never sell beyond what is on hand - but a refill is a service, so it is
+    // never out of stock and never quantity-capped.
+    const tracked = Number(product.track_stock) === 1;
     const available = Math.max(0, Number(product.on_hand) || 0);
-    if (available <= 0) {
-      outOfStock.push(product.name);
-      continue;
-    }
-    if (qty > available) {
-      overStock.push(`${available} × ${product.name}`);
-      continue;
+
+    if (tracked) {
+      if (available <= 0) {
+        outOfStock.push(product.name);
+        continue;
+      }
+      if (qty > available) {
+        overStock.push(`${available} × ${product.name}`);
+        continue;
+      }
     }
 
     const unitPrice = Number(product.price_cents) || 0;

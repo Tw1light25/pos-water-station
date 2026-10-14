@@ -11,7 +11,7 @@ import { fail, handler, json } from '../lib/http.js';
 export const config = { path: '/api/products' };
 
 const SQL = `
-  SELECT p.id, p.name, p.unit, p.category, p.price_cents,
+  SELECT p.id, p.name, p.unit, p.category, p.price_cents, p.track_stock,
          COALESCE((SELECT SUM(l.change_qty) FROM inventory_logs l
                    WHERE l.product_id = p.id AND l.deleted_at IS NULL), 0) AS on_hand
   FROM products p
@@ -29,6 +29,8 @@ export default handler(async (request) => {
       unit: row.unit,
       category: row.category,
       price_cents: Number(row.price_cents),
+      // Refills are a service: never out of stock, never quantity-capped.
+      track_stock: Number(row.track_stock) === 1,
       on_hand: Number(row.on_hand ?? 0),
     })),
   });

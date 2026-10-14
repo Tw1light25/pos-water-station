@@ -2,10 +2,13 @@
 
 import { del, get, post, put } from '../api.js';
 import { escapeHtml, modal, peso, plainAmount, toCents, toast, withSpinner } from '../ui.js';
+import { createCategoryField } from '../category-field.js';
 
 const view = { products: [], search: '', showInactive: false };
 
 function stockBadge(product) {
+  if (product.track_stock === false) return '<span class="badge">Not tracked</span>';
+
   const onHand = Number(product.on_hand) || 0;
   const reorder = Number(product.reorder_level) || 0;
   if (onHand <= 0) return `<span class="badge badge--red">Out (${onHand})</span>`;
@@ -39,17 +42,15 @@ function openProductModal(existing, onSaved) {
       <label class="field__label" for="p-name">Name</label>
       <input class="input" id="p-name" value="${escapeHtml(existing?.name ?? '')}" placeholder="5-Gallon Refill" />
     </div>
+    <div class="field">
+      <span class="field__label">Category</span>
+      <div id="p-category-host"></div>
+    </div>
     <div class="grid grid--2" style="gap: 0 14px">
-      <div class="field">
-        <label class="field__label" for="p-category">Category</label>
-        <input class="input" id="p-category" value="${escapeHtml(existing?.category ?? '')}" placeholder="Refill" />
-      </div>
       <div class="field">
         <label class="field__label" for="p-unit">Unit</label>
         <input class="input" id="p-unit" value="${escapeHtml(existing?.unit ?? 'container')}" placeholder="container" />
       </div>
-    </div>
-    <div class="grid grid--2" style="gap: 0 14px">
       <div class="field">
         <label class="field__label" for="p-price">Price (₱)</label>
         <input class="input" id="p-price" type="number" step="0.01" min="0"
@@ -60,25 +61,40 @@ function openProductModal(existing, onSaved) {
             : ''
         }
       </div>
+    </div>
+    <div class="grid grid--2" style="gap: 0 14px">
       <div class="field">
         <label class="field__label" for="p-reorder">Low-stock level</label>
         <input class="input" id="p-reorder" type="number" min="0" value="${Number(existing?.reorder_level) || 0}" />
       </div>
+      ${
+        isEdit
+          ? ''
+          : `<div class="field">
+               <label class="field__label" for="p-stock">Opening stock</label>
+               <input class="input" id="p-stock" type="number" value="0" />
+             </div>`
+      }
     </div>
-    ${
-      isEdit
-        ? ''
-        : `<div class="field">
-             <label class="field__label" for="p-stock">Opening stock</label>
-             <input class="input" id="p-stock" type="number" value="0" />
-             <span class="field__hint">Recorded as the first entry in the stock ledger.</span>
-           </div>`
-    }
+    <div class="field">
+      <span class="field__label">Stock</span>
+      <label class="switch">
+        <input type="checkbox" id="p-track" ${existing?.track_stock === false ? '' : 'checked'} />
+        <span class="switch__track"></span>
+        <span id="p-track-label">Track stock</span>
+      </label>
+      <span class="field__hint">
+        Untracked items (refills, services) are never counted, never run out and get no
+        stock ledger entries. Choosing the <strong>Refill</strong> category switches this off.
+      </span>
+    </div>
     <label class="switch" style="margin-top: 4px">
       <input type="checkbox" id="p-active" ${existing?.active === false ? '' : 'checked'} />
       <span class="switch__track"></span>
       <span>Active (visible to customers)</span>
     </label>`;
+
+  let categoryField = null;
 
   modal({
     title: isEdit ? 'Edit product' : 'Add product',
@@ -91,17 +107,22 @@ function openProductModal(existing, onSaved) {
         onClick: async ({ close, modal: root }) => {
           const payload = {
             name: root.querySelector('#p-name').value,
-            category: root.querySelector('#p-category').value,
+            category: categoryField?.value() ?? '',
             unit: root.querySelector('#p-unit').value,
             price_cents: toCents(root.querySelector('#p-price').value),
             reorder_level: Math.round(Number(root.querySelector('#p-reorder').value) || 0),
             active: root.querySelector('#p-active').checked,
+            track_stock: root.querySelector('#p-track').checked,
           };
           if (!payload.name.trim()) {
             toast('Product name is required', 'error');
             return;
           }
-          if (!isEdit) payload.initial_stock = Math.round(Number(root.querySelector('#p-stock').value) || 0);
+          if (!isEdit) {
+            payload.initial_stock = payload.track_stock
+              ? Math.round(Number(root.querySelector('#p-stock').value) || 0)
+              : 0;
+          }
 
           try {
             const data = isEdit
@@ -117,6 +138,32 @@ function openProductModal(existing, onSaved) {
       },
     ],
     onMount: (root) => {
+      const track = root.querySelector('#p-track');
+      const stockField = root.querySelector('#p-stock');
+
+      const syncStockVisibility = () => {
+        if (stockField) stockField.closest('.field').style.display = track.checked ? '' : 'none';
+      };
+
+      // The switch follows the category: "Refill" is a service, everything else
+      // is counted. It stays overridable - flip it and save.
+      categoryField = createCategoryField({
+        host: root.querySelector('#p-category-host'),
+        kind: 'product',
+        selected: existing?.category ?? '',
+        onChange: (name) => {
+          track.checked = String(name ?? '').trim().toLowerCase() !== 'refill';
+          syncStockVisibility();
+        },
+        // A rename/delete changes the products too - keep the list behind the
+        // modal in step instead of showing the old category name.
+        onListChange: () => Promise.resolve(onSaved?.()),
+      });
+      categoryField.load().catch(() => {});
+
+      track.addEventListener('change', syncStockVisibility);
+      syncStockVisibility();
+
       root.querySelector('.modal__body input')?.focus();
     },
   });

@@ -13,11 +13,14 @@ import {
   toDateInput,
   toast,
 } from '../ui.js';
+import { createCategoryField } from '../category-field.js';
 
 const view = { expenses: [], categories: [], search: '', category: '' };
 
-function expenseModal(existing, categories, onDone) {
+function expenseModal(existing, onDone) {
   const isEdit = Boolean(existing);
+  let categoryField = null;
+
   const body = `
     <div class="field">
       <label class="field__label" for="e-desc">What was it for?</label>
@@ -34,11 +37,8 @@ function expenseModal(existing, categories, onDone) {
       </div>
     </div>
     <div class="field">
-      <label class="field__label" for="e-category">Category</label>
-      <input class="input" id="e-category" list="category-list" value="${escapeHtml(existing?.category ?? 'general')}" />
-      <datalist id="category-list">
-        ${categories.map((category) => `<option value="${escapeHtml(category)}"></option>`).join('')}
-      </datalist>
+      <span class="field__label">Category</span>
+      <div id="e-category-host"></div>
     </div>
     <div class="field">
       <label class="field__label" for="e-note">Note</label>
@@ -57,7 +57,7 @@ function expenseModal(existing, categories, onDone) {
           const payload = {
             description: root.querySelector('#e-desc').value,
             amount_cents: toCents(root.querySelector('#e-amount').value),
-            category: root.querySelector('#e-category').value,
+            category: categoryField?.value() || 'general',
             spent_at: fromDateInput(root.querySelector('#e-date').value),
             note: root.querySelector('#e-note').value,
           };
@@ -73,7 +73,17 @@ function expenseModal(existing, categories, onDone) {
         },
       },
     ],
-    onMount: (root) => root.querySelector('#e-desc')?.focus(),
+    onMount: (root) => {
+      categoryField = createCategoryField({
+        host: root.querySelector('#e-category-host'),
+        kind: 'expense',
+        selected: existing?.category ?? 'general',
+        // A rename/delete changes the expenses too - refresh the list behind.
+        onListChange: () => Promise.resolve(onDone?.()),
+      });
+      categoryField.load().catch(() => {});
+      root.querySelector('#e-desc')?.focus();
+    },
   });
 }
 
@@ -189,7 +199,7 @@ export async function render(container) {
     list.querySelectorAll('tr[data-id]').forEach((row) => {
       const expense = view.expenses.find((item) => item.id === row.dataset.id);
       row.querySelector('[data-edit]').addEventListener('click', () =>
-        expenseModal(expense, view.categories, load),
+        expenseModal(expense, load),
       );
       row.querySelector('[data-delete]').addEventListener('click', async () => {
         try {
@@ -216,7 +226,7 @@ export async function render(container) {
   });
 
   container.querySelector('#add').addEventListener('click', () =>
-    expenseModal(null, view.categories, load),
+    expenseModal(null, load),
   );
 
   container.querySelector('#export').addEventListener('click', () => {

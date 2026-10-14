@@ -27,13 +27,16 @@ function productsHtml() {
 
   return state.products
     .map((product) => {
-      const available = Math.max(0, Number(product.on_hand) || 0);
-      const out = available <= 0;
-      const qty = out ? 0 : Math.min(state.cart.get(product.id) ?? 0, available);
+      // A refill is a service: no stock count, no cap, never "out of stock".
+      const tracked = product.track_stock !== false;
+      const available = tracked ? Math.max(0, Number(product.on_hand) || 0) : 0;
+      const out = tracked && available <= 0;
+      const max = tracked ? available : 999;
+      const qty = out ? 0 : Math.min(state.cart.get(product.id) ?? 0, max);
 
       const meta = out
         ? '<span style="color: var(--red); font-weight: 600">Out of stock</span>'
-        : `${escapeHtml(product.category ?? product.unit)} · ${available} available`;
+        : `${escapeHtml(product.category ?? product.unit)}${tracked ? ` · ${available} available` : ''}`;
 
       return `
       <div class="product ${out ? 'is-out' : ''}" data-id="${product.id}">
@@ -44,9 +47,9 @@ function productsHtml() {
         <div class="product__price">${peso(product.price_cents)}</div>
         <div class="stepper">
           <button type="button" data-minus aria-label="Less" ${out || qty <= 0 ? 'disabled' : ''}>−</button>
-          <input type="number" min="0" max="${available}" value="${qty}" data-qty aria-label="Quantity"
+          <input type="number" min="0" max="${max}" value="${qty}" data-qty aria-label="Quantity"
             ${out ? 'disabled' : ''} />
-          <button type="button" data-plus aria-label="More" ${out || qty >= available ? 'disabled' : ''}>+</button>
+          <button type="button" data-plus aria-label="More" ${out || qty >= max ? 'disabled' : ''}>+</button>
         </div>
       </div>`;
     })
@@ -149,10 +152,11 @@ function storeStatus() {
 }
 
 function paint() {
-  // Drop anything that has since run out before painting.
+  // Drop anything that has since run out before painting (refills never run out).
   for (const [id] of state.cart) {
     const product = state.products.find((item) => item.id === id);
-    if (!product || Number(product.on_hand) <= 0) state.cart.delete(id);
+    const tracked = product?.track_stock !== false;
+    if (!product || (tracked && Number(product.on_hand) <= 0)) state.cart.delete(id);
   }
 
   const productsHost = document.getElementById('products');
@@ -198,10 +202,11 @@ function wireProducts() {
   document.querySelectorAll('.product').forEach((card) => {
     const id = card.dataset.id;
     const product = state.products.find((item) => item.id === id);
-    const available = Math.max(0, Number(product?.on_hand) || 0);
+    const tracked = product?.track_stock !== false;
+    const available = tracked ? Math.max(0, Number(product?.on_hand) || 0) : 999;
 
-    // Out of stock: nothing on this card is interactive.
-    if (available <= 0) return;
+    // Out of stock: nothing on this card is interactive. Refills are never out.
+    if (tracked && available <= 0) return;
 
     const setQty = (value) => {
       const qty = Math.max(0, Math.min(available, Math.round(Number(value) || 0)));

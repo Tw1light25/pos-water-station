@@ -15,6 +15,7 @@ import { mountOrderRoutes } from './orders.js';
 import { mountDashboardRoutes } from './dashboard.js';
 import { mountAccountRoutes } from './account.js';
 import { mountBackupRoutes } from './backup.js';
+import { mountCategoryRoutes } from './categories.js';
 
 export function mountApi(app, db, sync, backup) {
   const api = express.Router();
@@ -50,6 +51,7 @@ export function mountApi(app, db, sync, backup) {
   mountDashboardRoutes(api, db);
   mountAccountRoutes(api, db);
   if (backup) mountBackupRoutes(api, backup);
+  mountCategoryRoutes(api, db);
 
   app.use('/api', api);
 }

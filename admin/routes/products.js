@@ -21,21 +21,41 @@ const SELECT_ONE = `
 
 function hydrate(row) {
   if (!row) return null;
-  return { ...row, active: Number(row.active) === 1, on_hand: Number(row.on_hand ?? 0) };
+  return {
+    ...row,
+    active: Number(row.active) === 1,
+    track_stock: Number(row.track_stock) === 1,
+    on_hand: Number(row.on_hand ?? 0),
+  };
 }
 
 function getProduct(db, id) {
   return db.prepare(SELECT_ONE).get(id);
 }
 
+/** "Refill" is a service, not stock - everything else is counted by default. */
+function defaultTrackStock(category) {
+  return String(category ?? '').trim().toLowerCase() === 'refill' ? 0 : 1;
+}
+
 function readBody(body) {
+  const category = body.category ? String(body.category).trim() : null;
+
+  let trackStock;
+  if (body.track_stock === undefined || body.track_stock === null) {
+    trackStock = defaultTrackStock(category);
+  } else {
+    trackStock = body.track_stock === true || body.track_stock === 1 || body.track_stock === '1' ? 1 : 0;
+  }
+
   return {
     name: String(body.name ?? '').trim(),
     unit: String(body.unit ?? 'pc').trim() || 'pc',
-    category: body.category ? String(body.category).trim() : null,
+    category,
     price_cents: Math.round(Number(body.price_cents) || 0),
     reorder_level: Math.round(Number(body.reorder_level) || 0),
     active: body.active === false || body.active === 0 ? 0 : 1,
+    track_stock: trackStock,
   };
 }
 
@@ -99,8 +119,8 @@ export function mountProductRoutes(api, db) {
     const now = Date.now();
     const id = ulid();
     db.prepare(
-      'INSERT INTO products (id, name, unit, category, price_cents, reorder_level, active, created_at, updated_at, deleted_at) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)',
+      'INSERT INTO products (id, name, unit, category, price_cents, reorder_level, active, track_stock, created_at, updated_at, deleted_at) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)',
     ).run(
       id,
       fields.name,
@@ -109,6 +129,7 @@ export function mountProductRoutes(api, db) {
       fields.price_cents,
       fields.reorder_level,
       fields.active,
+      fields.track_stock,
       now,
       now,
     );
@@ -136,7 +157,7 @@ export function mountProductRoutes(api, db) {
     if (!fields.name) return res.status(400).json({ error: 'Product name is required.' });
 
     db.prepare(
-      'UPDATE products SET name = ?, unit = ?, category = ?, price_cents = ?, reorder_level = ?, active = ?, updated_at = ? WHERE id = ?',
+      'UPDATE products SET name = ?, unit = ?, category = ?, price_cents = ?, reorder_level = ?, active = ?, track_stock = ?, updated_at = ? WHERE id = ?',
     ).run(
       fields.name,
       fields.unit,
@@ -144,6 +165,7 @@ export function mountProductRoutes(api, db) {
       fields.price_cents,
       fields.reorder_level,
       fields.active,
+      fields.track_stock,
       Date.now(),
       existing.id,
     );
