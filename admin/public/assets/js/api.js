@@ -23,7 +23,11 @@ export async function api(path, { method = 'GET', body, headers = {} } = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(data.error || `Request failed (${response.status})`);
+    const error = new Error(data.error || `Request failed (${response.status})`);
+    error.status = response.status;
+    // Some failures carry extra detail (e.g. which lines are over stock).
+    error.data = data;
+    throw error;
   }
   return data;
 }

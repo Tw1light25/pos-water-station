@@ -296,6 +296,17 @@ Untracked products:
 Their old ledger history is kept but ignored, so switching tracking back on
 would restore whatever was counted before.
 
+### Ordering more than you have
+
+- **Admin order form** - each product shows its stock (`· 5 in stock`, or
+  `· out of stock`) and a line that goes past it is flagged in red as you type.
+  Saving asks **“More than you have in stock - record anyway?”**, so overselling
+  is possible but never an accident. Confirming leaves stock negative until you
+  receive more.
+- **Customer site** - stricter: a customer simply cannot order past the stock on
+  hand, and out-of-stock items can't be added at all.
+- **Refills** are never flagged on either side - they are a service.
+
 ## Price history is immutable
 
 Changing a product's price affects **future orders only**. Every order line

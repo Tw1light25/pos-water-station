@@ -283,6 +283,16 @@ export function mountOrderRoutes(api, db) {
     const rawItems = Array.isArray(body.items) ? body.items : [];
     if (!rawItems.length) return res.status(400).json({ error: 'Add at least one item.' });
 
+    // Selling more than you have is allowed, but never by accident: the form
+    // confirms first and re-sends with allow_over_stock.
+    const shortfalls = stockShortfalls(db, rawItems);
+    if (shortfalls.length && body.allow_over_stock !== true) {
+      return res.status(409).json({
+        error: describeShortfalls(shortfalls),
+        over_stock: shortfalls,
+      });
+    }
+
     const now = Date.now();
     const id = ulid();
     const orderType = ORDER_TYPES.has(body.order_type) ? body.order_type : 'walkin';
@@ -436,6 +446,14 @@ export function mountOrderRoutes(api, db) {
     );
 
     if (Array.isArray(body.items) && body.items.length) {
+      const shortfalls = stockShortfalls(db, body.items);
+      if (shortfalls.length && body.allow_over_stock !== true) {
+        return res.status(409).json({
+          error: describeShortfalls(shortfalls),
+          over_stock: shortfalls,
+        });
+      }
+
       const now = Date.now();
       const oldItems = getItems(db, existing.id);
 
@@ -588,4 +606,50 @@ export function addPayment(db, orderId, { amount_cents, tendered_cents, method, 
 /** How much is still owed on an order. */
 export function outstandingCents(order) {
   return Math.max(0, Number(order?.total_cents ?? 0) - Number(order?.amount_paid_cents ?? 0));
+}
+
+/**
+ * Which tracked lines ask for more than we have on hand?
+ *
+ * Refills and other untracked products are never flagged - they are a service,
+ * so there is no stock to run out of.
+ *
+ * @returns {Array<{name:string, requested:number, available:number}>}
+ */
+export function stockShortfalls(db, items) {
+  const shortfalls = [];
+
+  for (const item of items) {
+    const productId = item.product_id ? String(item.product_id) : null;
+    const qty = Math.round(Number(item.qty) || 0);
+    if (!productId || qty <= 0) continue;
+
+    const row = db
+      .prepare(
+        `SELECT p.name, p.track_stock,
+                COALESCE((SELECT SUM(l.change_qty) FROM inventory_logs l
+                          WHERE l.product_id = p.id AND l.deleted_at IS NULL), 0) AS on_hand
+         FROM products p WHERE p.id = ?`,
+      )
+      .get(productId);
+
+    if (!row) continue;
+    if (Number(row.track_stock) !== 1) continue;
+
+    const available = Math.max(0, Number(row.on_hand) || 0);
+    if (qty > available) shortfalls.push({ name: row.name, requested: qty, available });
+  }
+
+  return shortfalls;
+}
+
+/** A readable sentence for the 409 response. */
+function describeShortfalls(shortfalls) {
+  return shortfalls
+    .map((item) =>
+      item.available <= 0
+        ? `${item.name} is out of stock`
+        : `only ${item.available} × ${item.name} available (you asked for ${item.requested})`,
+    )
+    .join('; ');
 }

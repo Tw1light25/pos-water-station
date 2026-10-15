@@ -60,6 +60,54 @@ function readDiscount(root, subtotal) {
 
 /* ------------------------------------------------------------ order builder */
 
+/** Tell the cashier what actually got saved - the server prices the order. */
+function reportCreated(created, payload, subtotal, discount) {
+  const fee = payload.order_type === 'delivery' ? payload.delivery_fee_cents : 0;
+  const previewTotal = subtotal - discount.cents + fee;
+  const savedTotal = Number(created?.order?.total_cents);
+
+  if (Number.isFinite(savedTotal) && savedTotal !== previewTotal) {
+    toast(`Prices had changed - this order was saved at ${peso(savedTotal)}`, 'error');
+  } else {
+    toast('Order created');
+  }
+}
+
+/** Ask before recording an order that goes past the stock on hand. */
+function confirmOverStock(shortfalls, onConfirm) {
+  const rows = shortfalls
+    .map(
+      (item) =>
+        `<li>${escapeHtml(item.name)} - asked for <strong>${item.requested}</strong>, ${
+          item.available <= 0
+            ? '<strong>out of stock</strong>'
+            : `only <strong>${item.available}</strong> in stock`
+        }</li>`,
+    )
+    .join('');
+
+  modal({
+    title: 'More than you have in stock',
+    body: `
+      <p>These lines go past what is on hand:</p>
+      <ul style="margin: 10px 0 0 18px; line-height: 1.8">${rows}</ul>
+      <p class="muted" style="margin-top: 14px">
+        Recording it anyway is fine - the stock count simply goes negative until you receive more.
+      </p>`,
+    actions: [
+      { label: 'Cancel', className: 'btn--ghost', onClick: ({ close }) => close() },
+      {
+        label: 'Record anyway',
+        className: 'btn--primary',
+        onClick: ({ close }) => {
+          close();
+          onConfirm();
+        },
+      },
+    ],
+  });
+}
+
 function openOrderModal(onDone) {
   const state = { type: 'walkin', items: [{ product_id: products[0]?.id ?? '', qty: 1 }] };
 
@@ -194,21 +242,24 @@ function openOrderModal(onDone) {
           try {
             const created = await post('/orders', payload);
             close();
-
-            // The server prices the order from the catalogue, not from this
-            // screen. If the two disagree, a price changed while the form was
-            // open - say so instead of letting the cashier give wrong change.
-            const fee = payload.order_type === 'delivery' ? payload.delivery_fee_cents : 0;
-            const previewTotal = subtotal - discount.cents + fee;
-            const savedTotal = Number(created?.order?.total_cents);
-
-            if (Number.isFinite(savedTotal) && savedTotal !== previewTotal) {
-              toast(`Prices had changed - this order was saved at ${peso(savedTotal)}`, 'error');
-            } else {
-              toast('Order created');
-            }
+            reportCreated(created, payload, subtotal, discount);
             onDone();
           } catch (error) {
+            // Over stock is allowed, but only on purpose: the server asks us to
+            // confirm, then we re-send flagging it.
+            if (error.status === 409 && Array.isArray(error.data?.over_stock)) {
+              confirmOverStock(error.data.over_stock, async () => {
+                try {
+                  const created = await post('/orders', { ...payload, allow_over_stock: true });
+                  close();
+                  reportCreated(created, payload, subtotal, discount);
+                  onDone();
+                } catch (retryError) {
+                  toast(retryError.message, 'error');
+                }
+              });
+              return;
+            }
             toast(error.message, 'error');
           }
         },
@@ -218,21 +269,30 @@ function openOrderModal(onDone) {
       const itemsHost = root.querySelector('#o-items');
 
       function renderItems() {
+        const stockSuffix = (product) => {
+          if (product.track_stock === false) return '';
+          const onHand = Math.max(0, Number(product.on_hand) || 0);
+          return onHand > 0 ? ` · ${onHand} in stock` : ' · out of stock';
+        };
+
         itemsHost.innerHTML = state.items
           .map(
             (item, index) => `
-          <div class="row" data-index="${index}" style="margin-bottom: 8px">
-            <select class="select" data-product style="flex: 1">
-              ${products
-                .map(
-                  (product) =>
-                    `<option value="${product.id}" ${product.id === item.product_id ? 'selected' : ''}>${escapeHtml(product.name)} — ${peso(product.price_cents)}</option>`,
-                )
-                .join('')}
-            </select>
-            <input class="input" data-qty type="number" min="1" value="${item.qty}" style="width: 74px" />
-            <span class="muted" data-line style="width: 86px; text-align: right"></span>
-            <button class="btn btn--sm btn--danger" data-remove type="button">×</button>
+          <div data-index="${index}" style="margin-bottom: 8px">
+            <div class="row" style="gap: 8px">
+              <select class="select" data-product style="flex: 1; min-width: 0">
+                ${products
+                  .map(
+                    (product) =>
+                      `<option value="${product.id}" ${product.id === item.product_id ? 'selected' : ''}>${escapeHtml(product.name)} — ${peso(product.price_cents)}${stockSuffix(product)}</option>`,
+                  )
+                  .join('')}
+              </select>
+              <input class="input" data-qty type="number" min="1" value="${item.qty}" style="width: 74px" />
+              <span class="muted" data-line style="width: 86px; text-align: right"></span>
+              <button class="btn btn--sm btn--danger" data-remove type="button">×</button>
+            </div>
+            <span class="field__hint" data-stock-warning style="display: none"></span>
           </div>`,
           )
           .join('');
@@ -264,6 +324,23 @@ function openOrderModal(onDone) {
           const product = products.find((p) => p.id === item.product_id);
           const line = (product?.price_cents ?? 0) * item.qty;
           row.querySelector('[data-line]').textContent = peso(line);
+
+          // Warn (without blocking) when a tracked line asks for more than we have.
+          const warning = row.querySelector('[data-stock-warning]');
+          const tracked = product?.track_stock !== false;
+          const available = Math.max(0, Number(product?.on_hand) || 0);
+
+          if (product && tracked && item.qty > available) {
+            warning.style.display = '';
+            warning.style.color = 'var(--red)';
+            warning.textContent =
+              available <= 0
+                ? `${product.name} is out of stock — you will be asked to confirm`
+                : `Only ${available} in stock — you will be asked to confirm`;
+          } else {
+            warning.style.display = 'none';
+            warning.textContent = '';
+          }
         });
       }
 
