@@ -1,6 +1,7 @@
 // graphify OpenCode plugin
 // Injects a knowledge graph reminder before the first shell command of a
-// session when the graph exists.
+// session, and keeps the graphify policy in the system prompt on every model
+// request so it applies to every prompt and every tool continuation.
 //
 // One file for both runtimes. OpenCode 2 reads `id` and `setup()` from the
 // default export; OpenCode 1 (1.3.4 and later) reads `server()` from it. Each
@@ -20,6 +21,19 @@ import { join } from "path";
 const REMINDER =
   'echo "[graphify] knowledge graph at graphify-out/. For focused questions, run graphify query with your question (scoped subgraph, usually much smaller than GRAPH_REPORT.md) instead of grepping raw files. Read GRAPH_REPORT.md only for broad architecture context." ; ';
 
+// Added to the system prompt on every model request when a graph exists. The
+// tag lets the global and project copies of this plugin de-duplicate it.
+const POLICY_TAG = "[graphify-policy]";
+const POLICY = [
+  POLICY_TAG,
+  "This project has a knowledge graph at graphify-out/.",
+  "For every prompt that concerns the codebase, your FIRST tool call MUST be",
+  'graphify query "<the user question>" (or graphify explain / graphify path when that is the focused tool).',
+  "Do NOT start with grep, rg, find, glob, read, ls, or git.",
+  "Read raw files only for lines the graph or an earlier read already surfaced.",
+  "Skip only if the user explicitly says not to use graphify, or the task is about stale or incorrect graph output.",
+].join(" ");
+
 const hasGraph = (directory) => existsSync(join(directory, "graphify-out", "graph.json"));
 
 // A project and a directory above it (often ~) can each hold a copy of this
@@ -35,6 +49,17 @@ export default {
   // OpenCode 2: the command tool is "shell", and one server outlives many
   // sessions, so the reminder is tracked per session.
   async setup(ctx) {
+    // Run before every model request (including tool continuations). This is
+    // what makes graphify apply to every prompt, not just the first command.
+    await ctx.session.hook("context", (event) => {
+      if (!hasGraph(ctx.location.directory)) return;
+      const alreadyAdded = event.system?.some((part) =>
+        String(part?.text ?? "").includes(POLICY_TAG),
+      );
+      if (alreadyAdded) return;
+      event.system.push({ type: "text", text: POLICY });
+    });
+
     await ctx.tool.hook("execute.before", (event) => {
       if (event.tool !== "shell" || typeof event.input?.command !== "string") return;
       if (reminded.has(event.sessionID)) return;
