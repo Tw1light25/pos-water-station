@@ -1,4 +1,4 @@
-/** Track order: phone number lookup showing the newest in-progress order. */
+/** Track order: look up by phone number or order code. */
 
 import { api } from './api.js';
 import { loadSettings } from './store.js';
@@ -93,16 +93,36 @@ function resultHtml(data) {
     </div>`;
 }
 
+function notFoundHtml(message) {
+  return `
+    <div class="card animate" style="max-width: 480px; margin: 0 auto">
+      <div class="empty">
+        <div class="empty__icon">🔍</div>
+        <h3 style="margin-bottom: 6px">No order found</h3>
+        <p class="muted">${escapeHtml(message)}</p>
+        <button class="btn" style="margin-top: 14px" onclick="location.reload()">Try again</button>
+      </div>
+    </div>`;
+}
+
 function formHtml() {
   return `
     <div class="card animate" style="max-width: 480px; margin: 0 auto">
       <h3 class="card__title">Track your order</h3>
       <p class="muted" style="font-size: 13px; margin-top: -6px">
-        Enter the phone number you used when ordering.
+        Enter the phone number you used when ordering, or the 6-character order code from your confirmation.
       </p>
       <div class="field">
-        <label class="field__label" for="phone">Phone number</label>
-        <input class="input" id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0917 000 0000" />
+        <label class="field__label" for="query">Phone number or order code</label>
+        <input
+          class="input"
+          id="query"
+          type="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="0917 000 0000 or ABC123"
+        />
       </div>
       <div id="error" class="alert alert--error hidden" style="margin-bottom: 12px"></div>
       <button class="btn btn--primary btn--block" id="lookup">Find my order</button>
@@ -110,14 +130,14 @@ function formHtml() {
 }
 
 function wireForm() {
-  const input = document.getElementById('phone');
+  const input = document.getElementById('query');
   const error = document.getElementById('error');
 
   const lookup = async () => {
     error.classList.add('hidden');
-    const phone = input.value.trim();
-    if (phone.replace(/\D/g, '').length < 7) {
-      error.textContent = 'Please enter a valid phone number.';
+    const query = input.value.trim();
+    if (!query) {
+      error.textContent = 'Enter a phone number or the 6-character order code.';
       error.classList.remove('hidden');
       return;
     }
@@ -127,17 +147,13 @@ function wireForm() {
     button.innerHTML = '<span class="spinner"></span> Checking...';
 
     try {
-      const data = await api('/api/track', { method: 'POST', body: { phone } });
+      const data = await api('/api/track', { method: 'POST', body: { query } });
       if (!data.found) {
-        app.innerHTML = `
-          <div class="card animate" style="max-width: 480px; margin: 0 auto">
-            <div class="empty">
-              <div class="empty__icon">🔍</div>
-              <h3 style="margin-bottom: 6px">No order found</h3>
-              <p class="muted">We could not find an order for that number. Double-check the number you ordered with.</p>
-              <button class="btn" style="margin-top: 14px" onclick="location.reload()">Try again</button>
-            </div>
-          </div>`;
+        app.innerHTML = notFoundHtml(
+          data.ambiguous
+            ? 'That order code matches more than one order. Please enter the phone number you ordered with instead.'
+            : 'We could not find an order for that phone number or order code. Double-check what you entered.',
+        );
         return;
       }
       app.innerHTML = resultHtml(data);

@@ -1,21 +1,26 @@
-# Graph Report - Point Of Sale  (2026-10-17)
+# Graph Report - Point Of Sale  (2026-11-05)
 
 ## Corpus Check
-- 86 files · ~56,715 words
+- 76 files · ~57,272 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 9 file(s) not represented in the graph (top: .css 3, .bat 2, .example 1)
 
 ## Summary
-- 1397 nodes · 3760 edges · 63 communities (47 shown, 16 thin omitted)
+- 1400 nodes · 3766 edges · 53 communities (41 shown, 12 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 122 edges (avg confidence: 0.85)
-- Token cost: 7,700 input · 5,140 output
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `4d12f6c1`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Admin Shell and API Client
 - Admin Auth and API Routes
 - Customer Site UI Shell
 - Chart.js Layout Engine
-- Chart.js Animation Loop
+- zt
 - Chart.js Core Exports
 - Chart.js Scale Hooks
 - Offline Sync Service
@@ -23,50 +28,40 @@
 - SQLite Backup Service
 - Chart.js Time Scale Ticks
 - Secret Scan and Scripts
-- Static Site Dev Server
+- make-icon.mjs
 - Chart.js Tooltip Geometry
 - Chart.js Event Bindings
 - Package Manifest
-- Chart.js Plugin Scopes
-- Express Server Bootstrap
-- Chart.js Bar Scale
-- Chart.js Dataset Elements
+- Cs
+- server.js
+- ca
+- ns
 - Chart.js Dataset Drawing
-- Chart.js Radial Scale
+- xt
 - Database Init and Seeding
 - SQLite DB and SQL Dialects
 - Chart.js Registry
 - Project Docs and Data Rules
-- Chart.js Animation Registry
+- _t
 - Chart.js Adapter Layer
 - Chart.js Canvas Platform
 - Chart.js Pie Controller
-- Chart.js Time Bounds
-- Chart.js Legend Events
-- Chart.js Time Adapters
+- o
 - Chart.js Layout Updates
 - Dashboard Time Buckets
-- Chart.js Dataset Visibility
 - Chart.js Grid Drawing
 - Chart.js Render Loop
-- Chart.js Tick Formatting
-- Chart.js Arc Element
-- Chart.js Dataset Controllers
-- Chart.js Tick Compute
+- s
 - Chart.js Canvas Resize
 - Windows Installer Script
-- Chart.js Pixel Mapping
+- ko
 - TiDB Bootstrap and Pool
-- Password Reset CLI
 - Chart.js Plugin Notify
-- Chart.js Data Parsing
 - Hydrain Brand Identity (root)
 - Chart.js Dataset Meta
-- Chart.js Bar Options
 - Money Centavos Helpers
 - Owner Login Flow
 - Admin Logo Brand Assets
-- Chart.js Style Resolution
 - Admin Favicon Brand Mark
 - Chart.js Teardown
 - Site Favicon Brand Mark
@@ -102,12 +97,12 @@
 - None detected.
 
 ## Hyperedges (group relationships)
+- **Hydrain Brand Identity Composition** — hydrain_logo, hydrain_water_droplet_mascot, hydrain_wordmark, hydrain_tagline, hydrain_wave_motif, hydrain_brand_palette [EXTRACTED 1.00]
+- **Offline-Safe Data Design Rules** — readme_ulid_keys, readme_last_write_wins, readme_stock_ledger, readme_centavo_money, readme_soft_delete [EXTRACTED 1.00]
 - **Offline Sync Write-Queue Flow** — readme_offline_first_sync, readme_outbox_queue, readme_ulid_keys, readme_last_write_wins, readme_soft_delete [EXTRACTED 1.00]
 - **Customer Site Landing to Order to Track Flow** — site_index_landing_page, site_order_order_page, site_track_track_page, readme_netlify_functions_api, readme_customer_offline_queue [INFERRED 0.85]
-- **Offline-Safe Data Design Rules** — readme_ulid_keys, readme_last_write_wins, readme_stock_ledger, readme_centavo_money, readme_soft_delete [EXTRACTED 1.00]
-- **Hydrain Brand Identity Composition** — hydrain_logo, hydrain_water_droplet_mascot, hydrain_wordmark, hydrain_tagline, hydrain_wave_motif, hydrain_brand_palette [EXTRACTED 1.00]
 
-## Communities (63 total, 16 thin omitted)
+## Communities (53 total, 12 thin omitted)
 
 ### Community 0 - "Admin Shell and API Client"
 Cohesion: 0.07
@@ -115,163 +110,139 @@ Nodes (113): api(), del(), get(), post(), put(), boot(), currentSlug(), loadSett
 
 ### Community 1 - "Admin Auth and API Routes"
 Cohesion: 0.07
-Nodes (66): mountAuthRoutes(), requireApiAuth(), mountAccountRoutes(), adoptInUseCategories(), DEPENDENT, ensureDefaultCategories(), findById(), findByName() (+58 more)
+Nodes (69): mountAuthRoutes(), requireApiAuth(), mountAccountRoutes(), adoptInUseCategories(), DEPENDENT, ensureDefaultCategories(), findById(), findByName() (+61 more)
 
 ### Community 2 - "Customer Site UI Shell"
 Cohesion: 0.07
-Nodes (70): api(), errorCard(), escapeHtml(), logoMark(), peso(), renderFooter(), renderHeader(), app (+62 more)
+Nodes (71): api(), errorCard(), escapeHtml(), logoMark(), peso(), renderFooter(), renderHeader(), app (+63 more)
 
 ### Community 3 - "Chart.js Layout Engine"
-Cohesion: 0.08
-Nodes (18): afterDraw(), afterEvent(), afterUpdate(), ba, Bi(), Ci(), configure(), Fi() (+10 more)
-
-### Community 4 - "Chart.js Animation Loop"
 Cohesion: 0.05
-Nodes (17): Bt(), color(), Cs, Ft(), Gt(), It(), jt(), kt() (+9 more)
+Nodes (21): afterDraw(), afterEvent(), afterUpdate(), ba, beforeLayout(), Bi(), Ci(), configure() (+13 more)
+
+### Community 4 - "zt"
+Cohesion: 0.12
+Nodes (8): Bt(), color(), Ft(), Gt(), jt(), te(), vt(), zt()
 
 ### Community 5 - "Chart.js Core Exports"
 Cohesion: 0.05
-Nodes (26): b(), beforeLayout(), cn(), destroy(), draw(), Ee(), es(), fe() (+18 more)
+Nodes (28): ao(), at(), b(), cn(), destroy(), draw(), Ee(), es() (+20 more)
 
 ### Community 6 - "Chart.js Scale Hooks"
-Cohesion: 0.08
-Nodes (3): d(), Di(), Xs()
+Cohesion: 0.09
+Nodes (4): d(), Di(), Xs(), Y()
 
 ### Community 7 - "Offline Sync Service"
 Cohesion: 0.08
-Nodes (29): createSyncService(), applyPulledRow(), doRun(), getPool(), pullOnce(), pushOnce(), pushRecord(), runOnce() (+21 more)
+Nodes (30): createSyncService(), applyPulledRow(), doRun(), getPool(), pullOnce(), pushOnce(), pushRecord(), runOnce() (+22 more)
 
 ### Community 8 - "Netlify Customer Functions"
-Cohesion: 0.12
-Nodes (24): config, hits, config, config, config, FINISHED, hits, getPool() (+16 more)
+Cohesion: 0.09
+Nodes (32): config, hits, config, config, config, FINISHED, hits, orderResponse() (+24 more)
 
 ### Community 9 - "SQLite Backup Service"
-Cohesion: 0.12
-Nodes (30): backupConfig(), BUSINESS_TABLES, changeCountSince(), countSince(), createBackupService(), backupIfChanged(), getStatus(), runNow() (+22 more)
+Cohesion: 0.09
+Nodes (36): backupConfig(), BUSINESS_TABLES, changeCountSince(), countSince(), createBackupService(), backupIfChanged(), getStatus(), runNow() (+28 more)
 
 ### Community 10 - "Chart.js Time Scale Ticks"
-Cohesion: 0.09
-Nodes (9): buildLookupTable(), _generate(), _getTimestampsForTable(), initOffsets(), lt(), no, nt(), zi() (+1 more)
+Cohesion: 0.07
+Nodes (10): buildLookupTable(), En, _generate(), _getTimestampsForTable(), init(), initOffsets(), no, nt() (+2 more)
 
 ### Community 11 - "Secret Scan and Scripts"
-Cohesion: 0.07
-Nodes (17): dotenv, files, FORBIDDEN, offending, pemFiles, walkFiles(), args, cfg (+9 more)
+Cohesion: 0.08
+Nodes (15): dotenv, files, FORBIDDEN, offending, pemFiles, walkFiles(), BANNER, FILES (+7 more)
 
-### Community 12 - "Static Site Dev Server"
-Cohesion: 0.07
-Nodes (23): BANNER, FILES, FROM, ROOT, TO, MIME, PORT, readBody() (+15 more)
+### Community 12 - "make-icon.mjs"
+Cohesion: 0.15
+Nodes (10): AND_MASK, BG, dir, DROP, entry, header, image, OUT (+2 more)
 
 ### Community 13 - "Chart.js Tooltip Geometry"
-Cohesion: 0.13
-Nodes (23): ao(), average(), dataset(), getCenterPoint(), ho(), Hs, _i(), index() (+15 more)
+Cohesion: 0.08
+Nodes (33): ai(), average(), dataset(), e(), ei(), getCenterPoint(), ho(), Hs (+25 more)
+
+### Community 14 - "Chart.js Event Bindings"
+Cohesion: 0.11
+Nodes (5): afterDatasetsUpdate(), an(), generateLabels(), onClick(), ts()
 
 ### Community 15 - "Package Manifest"
 Cohesion: 0.08
-Nodes (24): dependencies, dotenv, express, express-session, mysql2, description, engines, node (+16 more)
+Nodes (25): dependencies, dotenv, express, express-session, mysql2, description, engines, node (+17 more)
 
-### Community 16 - "Chart.js Plugin Scopes"
+### Community 17 - "server.js"
+Cohesion: 0.09
+Nodes (23): requirePageAuth(), DB_PATH, openLocalDatabase(), ADMIN_DIR, DATA_DIR, PUBLIC_DIR, app, APP_PAGES (+15 more)
+
+### Community 18 - "ca"
 Cohesion: 0.13
-Nodes (7): bn(), dn(), on(), pn(), un(), xn, Ye()
+Nodes (19): buildTicks(), ca(), _calculateBarIndexPixels(), _calculateBarValuePixels(), getBasePixel(), getLabelAndValue(), getLabelForValue(), getPixelForTick() (+11 more)
 
-### Community 17 - "Express Server Bootstrap"
-Cohesion: 0.11
-Nodes (16): requirePageAuth(), ADMIN_DIR, DATA_DIR, PUBLIC_DIR, app, APP_PAGES, backup, db (+8 more)
-
-### Community 18 - "Chart.js Bar Scale"
-Cohesion: 0.16
-Nodes (22): _calculateBarIndexPixels(), Fn(), Fo(), getPixelForTick(), getPixelForValue(), _getRuler(), _getStackCount(), _getStackIndex() (+14 more)
+### Community 19 - "ns"
+Cohesion: 0.05
+Nodes (10): As(), bn(), labelColor(), labelPointStyle(), ns(), on(), pn(), rt() (+2 more)
 
 ### Community 20 - "Chart.js Dataset Drawing"
-Cohesion: 0.11
-Nodes (15): beforeDatasetDraw(), beforeDatasetsDraw(), da(), ea(), fa(), ga(), ha, ia() (+7 more)
-
-### Community 21 - "Chart.js Radial Scale"
-Cohesion: 0.14
-Nodes (4): ca(), Do(), eo(), Oe()
+Cohesion: 0.12
+Nodes (15): beforeDatasetDraw(), beforeDatasetsDraw(), beforeDraw(), da(), ea(), fa(), ga(), ha (+7 more)
 
 ### Community 22 - "Database Init and Seeding"
 Cohesion: 0.19
 Nodes (19): applySchema(), DEFAULT_HOURS, ensureDatabase(), firstRow(), flags, line(), main(), printSummary() (+11 more)
 
 ### Community 23 - "SQLite DB and SQL Dialects"
-Cohesion: 0.18
-Nodes (14): DB_PATH, columnDefinition(), columnSql(), formatDefault(), MYSQL_TYPES, mysqlStatements(), quote(), renderMySQL() (+6 more)
+Cohesion: 0.27
+Nodes (13): columnDefinition(), columnSql(), formatDefault(), MYSQL_TYPES, mysqlStatements(), quote(), renderMySQL(), renderSQLite() (+5 more)
 
 ### Community 25 - "Project Docs and Data Rules"
 Cohesion: 0.14
 Nodes (18): Admin SPA Shell (index.html), AGENTS.md - Agent Working Context Guide, requireApiAuth Route Gate, Automatic SQLite Backup Snapshots, Customer-Side Offline Order Retry Queue, Last-Write-Wins Conflict Resolution, Netlify Customer API (settings, products, orders, track), Offline-First Sync Architecture (+10 more)
 
-### Community 26 - "Chart.js Animation Registry"
-Cohesion: 0.14
-Nodes (17): at(), e(), ei(), g(), gi(), je(), m(), mi() (+9 more)
+### Community 26 - "_t"
+Cohesion: 0.22
+Nodes (6): It(), kt(), mt(), qt(), _t(), wt()
 
 ### Community 27 - "Chart.js Adapter Layer"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (5): ce(), de, dt(), he(), qs()
 
 ### Community 28 - "Chart.js Canvas Platform"
-Cohesion: 0.18
-Nodes (11): ct(), fs(), ge(), gs(), ms(), ps(), i(), vs() (+3 more)
+Cohesion: 0.14
+Nodes (15): ct(), fs(), ge(), gi(), gs(), mi(), ms(), pe() (+7 more)
 
-### Community 30 - "Chart.js Time Bounds"
-Cohesion: 0.24
-Nodes (4): a(), determineDataLimits(), ko, pt()
-
-### Community 31 - "Chart.js Legend Events"
+### Community 30 - "o"
 Cohesion: 0.13
-Nodes (12): ai(), beforeDraw(), getRange(), hi(), K(), la(), li(), Ni() (+4 more)
-
-### Community 32 - "Chart.js Time Adapters"
-Cohesion: 0.13
-Nodes (8): H(), is(), j(), mo(), pi(), r(), vo(), wo()
+Nodes (18): a(), aa(), determineDataLimits(), dn(), g(), Gn(), m(), l() (+10 more)
 
 ### Community 33 - "Chart.js Layout Updates"
-Cohesion: 0.20
-Nodes (6): addBox(), beforeUpdate(), initialize(), reset(), start(), u()
+Cohesion: 0.18
+Nodes (7): addBox(), beforeUpdate(), initialize(), reset(), start(), u(), vn()
 
 ### Community 34 - "Dashboard Time Buckets"
 Cohesion: 0.42
 Nodes (12): mountDashboardRoutes(), bucketSeries(), dayKey(), lastDayKeys(), lastMonthKeys(), lastWeekKeys(), monthKey(), shifted() (+4 more)
 
-### Community 35 - "Chart.js Dataset Visibility"
-Cohesion: 0.22
-Nodes (4): aa(), afterDatasetsUpdate(), oa(), onClick()
-
-### Community 38 - "Chart.js Tick Formatting"
-Cohesion: 0.15
-Nodes (4): buildTicks(), En, init(), po()
-
-### Community 39 - "Chart.js Arc Element"
-Cohesion: 0.26
-Nodes (4): getLabelAndValue(), getLabelForValue(), n(), resolveDataElementOptions()
-
-### Community 41 - "Chart.js Tick Compute"
-Cohesion: 0.18
-Nodes (4): Be(), ne(), numeric(), xo
+### Community 41 - "s"
+Cohesion: 0.07
+Nodes (22): Be(), bo, et(), Fn(), Fo(), go(), H(), ii() (+14 more)
 
 ### Community 43 - "Windows Installer Script"
 Cohesion: 0.26
 Nodes (7): Get-NodeVersion(), Install-Node(), Stop-Install(), Test-NodeReady(), Update-SessionPath(), Write-Bad(), Write-Warn2()
 
-### Community 44 - "Chart.js Pixel Mapping"
-Cohesion: 0.18
-Nodes (3): bo, et(), getValueForPixel()
+### Community 44 - "ko"
+Cohesion: 0.15
+Nodes (5): getValueForPixel(), j(), ko, vo(), wo()
 
 ### Community 45 - "TiDB Bootstrap and Pool"
 Cohesion: 0.33
-Nodes (8): BOOTSTRAP_TABLES, bootstrapIfNeeded(), toSqliteValue(), connectionConfig(), createPool(), sslConfig(), fromProjectRoot(), COLUMNS
+Nodes (7): BOOTSTRAP_TABLES, bootstrapIfNeeded(), toSqliteValue(), connectionConfig(), createPool(), sslConfig(), fromProjectRoot()
 
-### Community 46 - "Password Reset CLI"
-Cohesion: 0.29
-Nodes (8): openLocalDatabase(), args, askHidden(), choosePassword(), line(), main(), SET_PASSWORD, USERNAME
+### Community 47 - "Chart.js Plugin Notify"
+Cohesion: 0.26
+Nodes (4): fe(), ks(), nn(), sn
 
 ### Community 49 - "Hydrain Brand Identity (root)"
 Cohesion: 0.38
 Nodes (9): Hydrain Brand Identity System, Cyan, Azure and Deep Navy Brand Palette, Hydrain Water Station Logo, Splash and Droplet Accents, Water Station Tagline, Smiling Water Droplet Mascot, Water Station Refilling Business, Curling Wave Ribbon Motif (+1 more)
-
-### Community 51 - "Chart.js Bar Options"
-Cohesion: 0.33
-Nodes (3): _calculateBarValuePixels(), getBasePixel(), updateElements()
 
 ### Community 52 - "Money Centavos Helpers"
 Cohesion: 0.36
@@ -298,24 +269,24 @@ Cohesion: 0.60
 Nodes (5): Aqua/Blue Splash Colour Palette and Wave Motif, Hydrain Brand Identity, Hydrain Water Station Logo (logo.jpg), Smiling Water Droplet Mascot, Rounded Blue Wordmark Lockup with 'WATER STATION' Subtitle
 
 ## Knowledge Gaps
-- **13 isolated node(s):** `Admin Login Page (login.html)`, `Customer Order Tracking Page`, `Track Stock Toggle and Refill-as-Service Rule`, `Client-Generated ULID Primary Keys`, `Last-Write-Wins Conflict Resolution` (+8 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 285 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **13 isolated node(s):** `Last-Write-Wins Conflict Resolution`, `Soft Deletes via deleted_at`, `Track Stock Toggle and Refill-as-Service Rule`, `Client-Generated ULID Primary Keys`, `Customer Order Tracking Page` (+8 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 286 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ns()` connect `Chart.js Dataset Elements` to `Chart.js Animation Loop`, `Chart.js Core Exports`, `Chart.js Arc Element`, `Chart.js Dataset Controllers`, `Chart.js Time Scale Ticks`, `Chart.js Data Parsing`, `Chart.js Bar Options`, `Chart.js Style Resolution`?**
+- **Why does `ns()` connect `ns` to `Cs`, `ca`, `Chart.js Core Exports`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `s()` (e.g. with `ho()` and `ii()`) actually correct?**
   _`s()` has 14 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Admin Login Page (login.html)`, `Customer Order Tracking Page`, `Track Stock Toggle and Refill-as-Service Rule` to the rest of the system?**
+- **What connects `Last-Write-Wins Conflict Resolution`, `Soft Deletes via deleted_at`, `Track Stock Toggle and Refill-as-Service Rule` to the rest of the system?**
   _13 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Admin Shell and API Client` be split into smaller, more focused modules?**
   _Cohesion score 0.0655757874015748 - nodes in this community are weakly interconnected._
-- **Why does `an()` connect `Chart.js Event Bindings` to `Chart.js Layout Updates`, `Chart.js Dataset Visibility`, `Chart.js Render Loop`, `Chart.js Core Exports`, `Chart.js Tooltip Geometry`, `Chart.js Bar Scale`, `Chart.js Dataset Meta`, `Chart.js Teardown`, `Chart.js Animation Registry`?**
+- **Why does `an()` connect `Chart.js Event Bindings` to `Chart.js Layout Updates`, `Chart.js Render Loop`, `Chart.js Core Exports`, `s`, `Chart.js Tooltip Geometry`, `Chart.js Dataset Meta`, `Chart.js Dataset Drawing`, `Chart.js Teardown`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Should `Admin Auth and API Routes` be split into smaller, more focused modules?**
-  _Cohesion score 0.07465108730931516 - nodes in this community are weakly interconnected._
-- **Why does `eo()` connect `Chart.js Radial Scale` to `Chart.js Layout Engine`, `Chart.js Core Exports`, `Chart.js Tick Formatting`, `Chart.js Tick Compute`, `Chart.js Bar Scale`, `Chart.js Time Bounds`?**
+  _Cohesion score 0.06709435979684576 - nodes in this community are weakly interconnected._
+- **Why does `eo()` connect `Chart.js Layout Engine` to `s`, `ca`, `Chart.js Core Exports`, `o`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
