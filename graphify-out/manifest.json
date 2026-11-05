@@ -72,10 +72,10 @@
     "semantic_hash": "c88b88d119457a68b81b661a4d072a54"
   },
   "admin/public/assets/js/views/dashboard.js": {
-    "mtime": 1791958974.7292538,
-    "seen": 1792201155.7903876,
-    "ast_hash": "265fedda6c128c16fdbbfa8ceeaffb50",
-    "semantic_hash": "265fedda6c128c16fdbbfa8ceeaffb50"
+    "mtime": 1793880415.1964653,
+    "seen": 1793880420.3271546,
+    "ast_hash": "59f738113ffcdabd6cec661f9ba1841e",
+    "semantic_hash": ""
   },
   "admin/public/assets/js/views/expenses.js": {
     "mtime": 1791966125.4918716,
@@ -150,10 +150,10 @@
     "semantic_hash": "cedb2139dbb0d4b6b8bbe43b5d0e8f4d"
   },
   "admin/routes/dashboard.js": {
-    "mtime": 1791964531.7041755,
-    "seen": 1792201155.790398,
-    "ast_hash": "88c67d14aba4ab188709a3339626b80d",
-    "semantic_hash": "88c67d14aba4ab188709a3339626b80d"
+    "mtime": 1793880347.2359872,
+    "seen": 1793880406.2427807,
+    "ast_hash": "19e11b13c547ce300ec0d40296e9f5ab",
+    "semantic_hash": ""
   },
   "admin/routes/expenses.js": {
     "mtime": 1791950775.367949,
@@ -366,10 +366,10 @@
     "semantic_hash": "cf1dd4ea412853da8afff13be1c61b3b"
   },
   "shared/time-buckets.js": {
-    "mtime": 1791950871.5578222,
-    "seen": 1792201155.7904263,
-    "ast_hash": "9184d29e2087d4137aaed41a8e5c2369",
-    "semantic_hash": "9184d29e2087d4137aaed41a8e5c2369"
+    "mtime": 1793880337.7512302,
+    "seen": 1793880406.242841,
+    "ast_hash": "db6f47dad1c4395ebd60554f786e423e",
+    "semantic_hash": ""
   },
   "site/assets/js/api.js": {
     "mtime": 1791951365.871275,

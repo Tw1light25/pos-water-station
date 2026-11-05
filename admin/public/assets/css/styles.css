@@ -622,6 +622,7 @@ button.switch:focus-visible {
 .badge--yellow { color: var(--yellow); border-color: rgba(224, 175, 104, 0.4); background: rgba(224, 175, 104, 0.1); }
 .badge--blue { color: var(--blue); border-color: rgba(122, 162, 247, 0.4); background: rgba(122, 162, 247, 0.1); }
 .badge--purple { color: var(--purple); border-color: rgba(187, 154, 247, 0.4); background: rgba(187, 154, 247, 0.1); }
+.badge--orange { color: var(--orange); border-color: rgba(255, 158, 100, 0.4); background: rgba(255, 158, 100, 0.1); }
 
 /* ---------------------------------------------------------------- alerts */
 

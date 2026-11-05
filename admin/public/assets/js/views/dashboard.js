@@ -1,6 +1,6 @@
 /**
- * Dashboard - four Tokyo Night line graphs in a 2x2 grid:
- * daily sales, weekly sales, monthly sales and outgoing money.
+ * Dashboard - Tokyo Night line graphs for today by hour, this week by date,
+ * and this month / this year with sales and outgoing expenses overlaid.
  */
 
 import { get } from '../api.js';
@@ -32,68 +32,90 @@ function gradient(context, from, to) {
   return fill;
 }
 
-function lineChart(canvas, { labels, values, color, from, to }) {
+function chartOptions({ showLegend = false, label = (item) => peso(item.parsed.y) } = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 900, easing: 'easeOutQuart' },
+    interaction: { intersect: false, mode: 'index' },
+    plugins: {
+      legend: showLegend
+        ? {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: { color: '#a9b1d6', font: { size: 11 }, boxWidth: 10, boxHeight: 10 },
+          }
+        : { display: false },
+      tooltip: {
+        backgroundColor: '#16161e',
+        borderColor: '#3b4261',
+        borderWidth: 1,
+        titleColor: '#c0caf5',
+        bodyColor: '#a9b1d6',
+        padding: 10,
+        displayColors: showLegend,
+        callbacks: { label },
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(59, 66, 97, 0.28)', drawTicks: false },
+        border: { display: false },
+        ticks: { color: '#565f89', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 14 },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(59, 66, 97, 0.28)', drawTicks: false },
+        border: { display: false },
+        ticks: {
+          color: '#565f89',
+          font: { size: 10 },
+          maxTicksLimit: 5,
+          callback: (value) => '\u20B1' + (Number(value) / 100).toLocaleString('en-PH'),
+        },
+      },
+    },
+  };
+}
+
+function lineDataset({ label, values, color, from, to, fill = true }) {
+  return {
+    label,
+    data: values,
+    borderColor: color,
+    backgroundColor: (context) => gradient(context, from, to),
+    fill,
+    tension: 0.36,
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 5,
+    pointHoverBackgroundColor: color,
+    pointHoverBorderColor: '#1a1b26',
+    pointHoverBorderWidth: 2,
+  };
+}
+
+function lineChart(canvas, options) {
   return new window.Chart(canvas, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          data: values,
-          borderColor: color,
-          backgroundColor: (context) => gradient(context, from, to),
-          fill: true,
-          tension: 0.36,
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          pointHoverBackgroundColor: color,
-          pointHoverBorderColor: '#1a1b26',
-          pointHoverBorderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 900, easing: 'easeOutQuart' },
-      interaction: { intersect: false, mode: 'index' },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#16161e',
-          borderColor: '#3b4261',
-          borderWidth: 1,
-          titleColor: '#c0caf5',
-          bodyColor: '#a9b1d6',
-          padding: 10,
-          displayColors: false,
-          callbacks: { label: (item) => peso(item.parsed.y) },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: 'rgba(59, 66, 97, 0.28)', drawTicks: false },
-          border: { display: false },
-          ticks: { color: '#565f89', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 14 },
-        },
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(59, 66, 97, 0.28)', drawTicks: false },
-          border: { display: false },
-          ticks: {
-            color: '#565f89',
-            font: { size: 10 },
-            maxTicksLimit: 5,
-            callback: (value) => '\u20B1' + (Number(value) / 100).toLocaleString('en-PH'),
-          },
-        },
-      },
-    },
+    data: { labels: options.labels, datasets: [lineDataset(options)] },
+    options: chartOptions(),
   });
 }
 
-function chartCard(id, title, hint) {
+function multiLineChart(canvas, { labels, series }) {
+  return new window.Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: series.map(lineDataset) },
+    options: chartOptions({
+      showLegend: true,
+      label: (item) => `${item.dataset.label}: ${peso(item.parsed.y)}`,
+    }),
+  });
+}
+
+function chartCard(id, title, hint, { outgoing = false } = {}) {
   return `
     <div class="card card--hover">
       <div class="card__head">
@@ -101,7 +123,10 @@ function chartCard(id, title, hint) {
           <h3 class="card__title">${title}</h3>
           <span class="card__hint">${hint}</span>
         </div>
-        <span class="badge" id="${id}-total">-</span>
+        <div class="row" style="gap: 6px">
+          <span class="badge badge--blue" id="${id}-sales-total">-</span>
+          ${outgoing ? `<span class="badge badge--orange" id="${id}-outgoing-total">-</span>` : ''}
+        </div>
       </div>
       <div class="chart-card__canvas"><canvas id="${id}"></canvas></div>
     </div>`;
@@ -115,10 +140,12 @@ export async function render(container, ctx) {
     <div class="grid grid--4" id="kpis"></div>
     <div id="alerts" style="margin-top: 16px"></div>
     <div class="grid grid--2" style="margin-top: 16px">
-      ${chartCard('chart-daily', 'Daily sales', 'Money collected per day · last 14 days')}
-      ${chartCard('chart-weekly', 'Weekly sales', 'Per week · last 12 weeks')}
-      ${chartCard('chart-monthly', 'Monthly sales', 'Per month · last 12 months')}
-      ${chartCard('chart-outgoing', 'Outgoing money', 'Expenses per month · last 12 months')}
+      ${chartCard('chart-daily', 'Daily sales', 'Money collected per hour · today')}
+      ${chartCard('chart-weekly', 'Weekly sales', 'Money collected per day · Sunday to Saturday')}
+    </div>
+    <div class="grid" style="margin-top: 16px">
+      ${chartCard('chart-monthly', 'Monthly sales & outgoing', 'Sales vs expenses per day · this month', { outgoing: true })}
+      ${chartCard('chart-yearly', 'Yearly sales & outgoing', 'Sales vs expenses · every mid-month and month-end', { outgoing: true })}
     </div>`;
 
   const currency = ctx?.state?.settings?.currency ?? 'PHP';
@@ -167,27 +194,66 @@ export async function render(container, ctx) {
     await loadChartJs();
     if (ctx?.isCurrent && !ctx.isCurrent()) return;
 
-    const make = (id, series, color, from, to) => {
+    const setBadge = (id, value, className) => {
+      const badge = container.querySelector(`#${id}`);
+      if (!badge) return;
+      badge.className = className;
+      badge.textContent = value;
+    };
+
+    const prepareCanvas = (id) => {
       const canvas = container.querySelector(`#${id}`);
-      if (!canvas) return;
+      if (!canvas) return null;
 
       // Never create a second chart on a canvas that still has one.
       const existing = window.Chart.getChart(canvas);
       if (existing) existing.destroy();
+      return canvas;
+    };
 
-      const badge = container.querySelector(`#${id}-total`);
-      if (badge) {
-        badge.className = 'badge badge--blue';
-        badge.textContent = peso(series.total_cents);
-      }
+    const make = (id, series, color, from, to) => {
+      const canvas = prepareCanvas(id);
+      if (!canvas) return;
 
+      setBadge(`${id}-sales-total`, peso(series.total_cents), 'badge badge--blue');
       charts.push(lineChart(canvas, { labels: series.labels, values: series.values, color, from, to }));
+    };
+
+    const makeDual = (id, series) => {
+      const canvas = prepareCanvas(id);
+      if (!canvas) return;
+
+      setBadge(`${id}-sales-total`, peso(series.sales_total_cents), 'badge badge--blue');
+      setBadge(`${id}-outgoing-total`, peso(series.outgoing_total_cents), 'badge badge--orange');
+
+      charts.push(
+        multiLineChart(canvas, {
+          labels: series.labels,
+          series: [
+            {
+              label: 'Sales',
+              values: series.sales,
+              color: '#7dcfff',
+              from: 'rgba(125, 207, 255, 0.35)',
+              to: 'rgba(125, 207, 255, 0.02)',
+            },
+            {
+              label: 'Outgoing',
+              values: series.outgoing,
+              color: '#ff9e64',
+              from: 'rgba(255, 158, 100, 0.35)',
+              to: 'rgba(255, 158, 100, 0.02)',
+              fill: false,
+            },
+          ],
+        }),
+      );
     };
 
     make('chart-daily', data.daily, '#7aa2f7', 'rgba(122, 162, 247, 0.35)', 'rgba(122, 162, 247, 0.02)');
     make('chart-weekly', data.weekly, '#bb9af7', 'rgba(187, 154, 247, 0.35)', 'rgba(187, 154, 247, 0.02)');
-    make('chart-monthly', data.monthly, '#7dcfff', 'rgba(125, 207, 255, 0.35)', 'rgba(125, 207, 255, 0.02)');
-    make('chart-outgoing', data.outgoing, '#ff9e64', 'rgba(255, 158, 100, 0.35)', 'rgba(255, 158, 100, 0.02)');
+    makeDual('chart-monthly', data.monthly);
+    makeDual('chart-yearly', data.yearly);
   } catch (error) {
     container.querySelector('#kpis').innerHTML = `
       <div class="card"><p style="color: var(--red)">Failed to load dashboard: ${escapeHtml(error.message)}</p></div>`;

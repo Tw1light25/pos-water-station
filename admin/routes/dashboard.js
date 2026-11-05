@@ -9,14 +9,15 @@
 import express from 'express';
 import {
   bucketSeries,
+  currentMonthDayKeys,
+  currentWeekDayKeys,
+  currentYearHalfMonthKeys,
   dayKey,
-  lastDayKeys,
-  lastMonthKeys,
-  lastWeekKeys,
+  halfMonthKey,
+  hourOfDay,
   monthKey,
   shortDayLabel,
-  shortMonthLabel,
-  weekKey,
+  shortHourLabel,
 } from '../../shared/time-buckets.js';
 
 const MS_DAY = 86_400_000;
@@ -46,46 +47,52 @@ export function mountDashboardRoutes(api, db) {
       )
       .all();
 
-    const dayKeys = lastDayKeys(14, timezone, now);
-    const weekKeys = lastWeekKeys(12, timezone, now);
-    const monthKeys = lastMonthKeys(12, timezone, now);
+    const todayKey = dayKey(now, timezone);
+    const thisMonth = monthKey(now, timezone);
+    const hours = Array.from({ length: 24 }, (_, hour) => hour);
+    const weekKeys = currentWeekDayKeys(timezone, now);
+    const monthKeys = currentMonthDayKeys(timezone, now);
+    const yearKeys = currentYearHalfMonthKeys(timezone, now);
 
-    const daily = bucketSeries(payments, {
-      keys: dayKeys,
-      keyOf: (row) => dayKey(row.paid_at, timezone),
-      valueOf: (row) => Number(row.amount_cents) || 0,
-    });
+    const daily = bucketSeries(
+      payments.filter((payment) => dayKey(payment.paid_at, timezone) === todayKey),
+      {
+        keys: hours,
+        keyOf: (row) => hourOfDay(row.paid_at, timezone),
+        valueOf: (row) => Number(row.amount_cents) || 0,
+      },
+    );
     const weekly = bucketSeries(payments, {
       keys: weekKeys,
-      keyOf: (row) => weekKey(row.paid_at, timezone),
+      keyOf: (row) => dayKey(row.paid_at, timezone),
       valueOf: (row) => Number(row.amount_cents) || 0,
     });
     const monthly = bucketSeries(payments, {
       keys: monthKeys,
-      keyOf: (row) => monthKey(row.paid_at, timezone),
+      keyOf: (row) => dayKey(row.paid_at, timezone),
       valueOf: (row) => Number(row.amount_cents) || 0,
     });
     const outgoing = bucketSeries(expenses, {
       keys: monthKeys,
-      keyOf: (row) => monthKey(row.spent_at, timezone),
+      keyOf: (row) => dayKey(row.spent_at, timezone),
+      valueOf: (row) => Number(row.amount_cents) || 0,
+    });
+    const yearlySales = bucketSeries(payments, {
+      keys: yearKeys,
+      keyOf: (row) => halfMonthKey(row.paid_at, timezone),
+      valueOf: (row) => Number(row.amount_cents) || 0,
+    });
+    const yearlyOutgoing = bucketSeries(expenses, {
+      keys: yearKeys,
+      keyOf: (row) => halfMonthKey(row.spent_at, timezone),
       valueOf: (row) => Number(row.amount_cents) || 0,
     });
 
-    const todayKey = dayKey(now, timezone);
-    const thisMonth = monthKey(now, timezone);
     const sum = (list) => list.reduce((total, value) => total + value, 0);
 
-    const salesToday = sum(
-      payments.filter((p) => dayKey(p.paid_at, timezone) === todayKey).map((p) => Number(p.amount_cents) || 0),
-    );
-    const salesMonth = sum(
-      payments.filter((p) => monthKey(p.paid_at, timezone) === thisMonth).map((p) => Number(p.amount_cents) || 0),
-    );
-    const outgoingThisMonth = sum(
-      expenses
-        .filter((e) => monthKey(e.spent_at, timezone) === thisMonth)
-        .map((e) => Number(e.amount_cents) || 0),
-    );
+    const salesToday = sum(daily);
+    const salesMonth = sum(monthly);
+    const outgoingThisMonth = sum(outgoing);
     const outstanding = sum(
       orders
         .filter((o) => o.payment_status !== 'paid')
@@ -123,10 +130,22 @@ export function mountDashboardRoutes(api, db) {
         pending_orders: pendingOrders,
         low_stock: lowStockItems.length,
       },
-      daily: { labels: dayKeys.map(shortDayLabel), values: daily, total_cents: sum(daily) },
+      daily: { labels: hours.map(shortHourLabel), values: daily, total_cents: sum(daily) },
       weekly: { labels: weekKeys.map(shortDayLabel), values: weekly, total_cents: sum(weekly) },
-      monthly: { labels: monthKeys.map(shortMonthLabel), values: monthly, total_cents: sum(monthly) },
-      outgoing: { labels: monthKeys.map(shortMonthLabel), values: outgoing, total_cents: sum(outgoing) },
+      monthly: {
+        labels: monthKeys.map(shortDayLabel),
+        sales: monthly,
+        outgoing,
+        sales_total_cents: sum(monthly),
+        outgoing_total_cents: sum(outgoing),
+      },
+      yearly: {
+        labels: yearKeys.map(shortDayLabel),
+        sales: yearlySales,
+        outgoing: yearlyOutgoing,
+        sales_total_cents: sum(yearlySales),
+        outgoing_total_cents: sum(yearlyOutgoing),
+      },
       low_stock_items: lowStockItems,
     });
   });
