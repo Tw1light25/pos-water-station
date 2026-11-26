@@ -295,6 +295,18 @@ h1, h2, h3, h4 {
 }
 .nav__item.is-active svg { opacity: 1; color: var(--blue); }
 
+/* Red dot marking a newer release, like the package-manager trays. */
+.nav__badge {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 3px rgba(247, 118, 142, 0.18);
+}
+.nav__badge[hidden] { display: none; }
+
 .nav__item.is-active::before {
   content: '';
   position: absolute;

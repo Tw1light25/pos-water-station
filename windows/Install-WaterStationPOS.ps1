@@ -163,7 +163,7 @@ Write-Head '3 of 7 - Database connection'
 Write-Host '  Press Enter to accept the value shown in [brackets].' -ForegroundColor Gray
 Write-Host ''
 
-$dbHost = Read-Value 'TiDB host' 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com'
+$dbHost = Read-Value 'TiDB host' ''
 $dbPort = Read-Value 'TiDB port' '4000'
 $dbUser = Read-Value 'TiDB user (the one ending in .root)' ''
 $dbName = Read-Value 'Database name' 'pos-water-station'

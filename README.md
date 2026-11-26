@@ -150,6 +150,39 @@ npm run password    # reset a locked-out owner password
 The TiDB IP allowlist must include `0.0.0.0/0` (or Netlify's ranges) for the
 functions to connect.
 
+### Releasing an update to clients
+
+Each shop PC updates itself from your GitHub releases - nobody visits the shop.
+
+```bash
+npm version patch        # or minor / major - edits package.json
+git push && git push --tags
+
+git tag v1.2.0           # if you prefer not to use npm version
+git push origin v1.2.0
+```
+
+Then on GitHub: **Releases → Draft a new release → pick the tag → Publish**.
+A *draft* or *pre-release* is ignored, so nothing goes live until you publish.
+
+On each client:
+
+1. A **red dot** appears beside **Settings** (checked at startup and every 6 hours).
+2. **Settings → App updates** shows the new version and your release notes.
+3. The owner clicks **Update now**. The admin downloads the release, then
+   restarts itself; the launcher installs the file swap, runs `npm install` and
+   starts the POS again.
+
+Rules that make this safe:
+
+- The version in `package.json` **must match the tag**. A mismatch is refused.
+- An update never touches `.env`, `data/`, `hide/`, `backups/`, `certs/` or
+  `node_modules/` - the shop's credentials and live sales stay put.
+- A copy of the previous code is kept in `data/update-backup/` during the swap
+  and restored automatically if `npm install` fails.
+- The current files are *not* replaced while the server is running; the server
+  exits with code `75` and `windows/Run-WaterStationPOS.ps1` finishes the job.
+
 ### "Build failed - exposed secrets"
 
 Netlify scans in two ways, and both **fail the build**:
@@ -400,6 +433,8 @@ Point Of Sale/
     prepare-site.js          # copy browser-safe shared modules into site/
     site-dev.js              # local preview server for the customer site
   windows/                   # Windows installer + packaging (see above)
+    Run-WaterStationPOS.ps1  # launcher + update hand-off (exit code 75)
+    Update-WaterStationPOS.ps1 # installs a staged release, rolls back on failure
   Install.bat  Start POS.bat # double-click entry points for the client
   data/                      # generated: pos.db, outbox.jsonl, sync-state.json
   backups/                   # generated: automatic snapshots (never pushed)

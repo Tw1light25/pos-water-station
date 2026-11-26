@@ -5,6 +5,7 @@
  */
 
 import { get, post, put } from '../api.js';
+import { checkForUpdate, onUpdateAvailable } from '../app.js';
 import { escapeHtml, formatDate, toCents, plainAmount, toast, withSpinner } from '../ui.js';
 import { normalizeHours, computeStoreStatus, describeStatus, formatTime12 } from '/shared/store-status.js';
 
@@ -148,6 +149,16 @@ export async function render(container, { state, refreshShell }) {
         <button class="btn btn--primary" type="submit" id="save">Save changes</button>
       </div>
     </form>
+
+    <section class="card" style="margin-top: 16px">
+      <div class="card__head">
+        <h3 class="card__title">App updates</h3>
+        <span class="card__hint">New versions come from the developer's releases</span>
+      </div>
+      <div id="update-body">
+        <p class="muted">Checking for updates...</p>
+      </div>
+    </section>
 
     <section class="card" style="margin-top: 16px">
       <div class="card__head">
@@ -432,4 +443,79 @@ export async function render(container, { state, refreshShell }) {
       restore();
     }
   });
+
+  // Not awaited: the card paints itself once the check answers.
+  wireUpdates(container, { isCurrent });
+}
+
+/**
+ * The "App updates" card: current version, what is on the server, and a button
+ * that only works when there is something to install.
+ *
+ * Updates are never automatic - the shop decides when to restart.
+ */
+async function wireUpdates(container, { isCurrent }) {
+  const body = container.querySelector('#update-body');
+  if (!body) return;
+
+  const paint = (info) => {
+    if (!isCurrent()) return;
+    const current = escapeHtml(info?.current ?? '-');
+    const latest = info?.latest ? escapeHtml(info.latest) : null;
+
+    if (info?.readyToRestart) {
+      body.innerHTML = `
+        <div class="alert">Version ${latest} is downloaded. Close and reopen the POS to finish installing.</div>
+        <p class="muted">Current version: ${current}</p>`;
+      return;
+    }
+
+    if (info?.updateAvailable) {
+      body.innerHTML = `
+        <div class="row-between" style="margin-bottom: 10px">
+          <span>Current version: <strong>${current}</strong></span>
+          <span class="badge badge--green">${latest} available</span>
+        </div>
+        ${info.notes ? `<div class="alert" style="white-space: pre-wrap">${escapeHtml(info.notes)}</div>` : ''}
+        ${info.pending ? `<p class="muted">${info.pending} change(s) are still sending to the database. They finish after the restart - nothing is lost.</p>` : ''}
+        <button class="btn btn--primary" type="button" id="update-now">Update now</button>
+        <p class="field__hint" style="margin-top: 8px">The POS closes and reopens by itself. Any order form on screen that you have not saved will be cleared.</p>`;
+      const button = body.querySelector('#update-now');
+      button?.addEventListener('click', async () => {
+        const open = document.querySelector('.modal');
+        if (open) {
+          toast('Save or close the open form first', 'error');
+          return;
+        }
+        button.disabled = true;
+        button.textContent = 'Starting update...';
+        try {
+          await post('/update/apply');
+          button.textContent = 'Restarting...';
+          toast('Update started - the POS will reopen in a moment');
+        } catch (error) {
+          toast(error.message, 'error');
+          button.disabled = false;
+          button.textContent = 'Update now';
+        }
+      });
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="row-between">
+        <span>Current version: <strong>${current}</strong>${latest ? ` - latest is <strong>${latest}</strong>` : ''}</span>
+        <button class="btn btn--sm" type="button" id="update-check">Check again</button>
+      </div>
+      <p class="muted" style="margin-top: 8px">${
+        info?.error ? `Could not check for updates: ${escapeHtml(info.error)}` : 'You are running the latest version.'
+      }</p>`;
+    body.querySelector('#update-check')?.addEventListener('click', async () => {
+      const info = await checkForUpdate();
+      paint(info);
+    });
+  };
+
+  const { checkForUpdate, onUpdateAvailable } = await import('../app.js');
+  onUpdateAvailable(paint);
 }

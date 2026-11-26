@@ -1,7 +1,6 @@
 @echo off
 setlocal EnableExtensions
 title Water Station POS
-cd /d "%~dp0"
 
 where node >nul 2>&1
 if errorlevel 1 (
@@ -13,16 +12,21 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Only start the server if it is not already listening on the admin port.
+REM Already running? Just open the browser and leave it alone.
 netstat -ano | findstr /C:"127.0.0.1:3000" >nul 2>&1
-if errorlevel 1 (
-    echo Starting the Water Station POS server...
-    start "Water Station POS server" /min cmd /k "npm run admin"
-    echo Waiting for it to come up...
-    timeout /t 7 /nobreak >nul
-) else (
+if not errorlevel 1 (
     echo The Water Station POS server is already running.
+    start "" "http://127.0.0.1:3000"
+    exit /b 0
 )
+
+REM The server runs inside the launcher so an update can be installed and the
+REM POS restarted without the shop touching anything. Closing this window
+REM stops the POS.
+start "Water Station POS server" /min cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0windows\Run-WaterStationPOS.ps1"""
+
+echo Waiting for the server to come up...
+timeout /t 7 /nobreak >nul
 
 start "" "http://127.0.0.1:3000"
 exit /b 0

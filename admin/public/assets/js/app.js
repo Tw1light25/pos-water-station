@@ -36,6 +36,7 @@ function renderNav() {
       <div class="nav__item" data-slug="${route.slug}">
         ${icon(route.icon)}
         <span>${route.label}</span>
+        ${route.slug === 'settings' ? '<span class="nav__badge" id="nav-update-dot" hidden title="Update available"></span>' : ''}
       </div>`,
   ).join('');
 
@@ -186,6 +187,44 @@ export async function refreshShell() {
   await refreshSync();
 }
 
+/* -------------------------------------------------------------- update dot */
+
+const updateListeners = new Set();
+export const updateState = { info: null };
+
+/** Subscribe to update-check results (the Settings view uses this too). */
+export function onUpdateAvailable(listener) {
+  updateListeners.add(listener);
+  if (updateState.info) listener(updateState.info);
+  return () => updateListeners.delete(listener);
+}
+
+function paintUpdateDot(info) {
+  const dot = document.getElementById('nav-update-dot');
+  if (!dot) return;
+  const available = Boolean(info?.updateAvailable || info?.readyToRestart);
+  dot.hidden = !available;
+  dot.title = info?.readyToRestart
+    ? `Version ${info.latest} is downloaded - reopen the POS to finish`
+    : available
+      ? `Version ${info?.latest} is available`
+      : '';
+}
+
+/** Ask GitHub (through the local server) whether a newer release exists. */
+export async function checkForUpdate() {
+  try {
+    const data = await get('/update/check');
+    updateState.info = data.update ?? null;
+    paintUpdateDot(updateState.info);
+    updateListeners.forEach((listener) => listener(updateState.info));
+    return updateState.info;
+  } catch {
+    // A failed check is never worth interrupting the shop.
+    return null;
+  }
+}
+
 async function loadSettings() {
   try {
     const data = await get('/settings');
@@ -308,6 +347,10 @@ async function boot() {
   refreshSync();
   setInterval(refreshStatus, 30_000);
   setInterval(refreshSync, 15_000);
+
+  // Update check: shortly after boot, then a few times a day. Never blocking.
+  checkForUpdate();
+  setInterval(checkForUpdate, 6 * 60 * 60 * 1000);
 }
 
 boot();

@@ -298,6 +298,18 @@ export function mountOrderRoutes(api, db) {
     const orderType = ORDER_TYPES.has(body.order_type) ? body.order_type : 'walkin';
     const customerId = resolveCustomer(db, body);
 
+    // A sale may be filed on an earlier day (backdated entry). Future dates are
+    // refused so reports never count money that has not happened yet.
+    const placedAt = Number(body.placed_at) || now;
+    if (!Number.isFinite(placedAt) || placedAt <= 0) {
+      return res.status(400).json({ error: 'Invalid date of sale.' });
+    }
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    if (placedAt > endOfToday.getTime()) {
+      return res.status(400).json({ error: 'Date of sale cannot be in the future.' });
+    }
+
     const order = {
       id,
       customer_id: customerId,
@@ -316,7 +328,7 @@ export function mountOrderRoutes(api, db) {
       due_date: body.due_date ? Number(body.due_date) : null,
       address: body.address ? String(body.address).trim() : null,
       note: body.note ? String(body.note).trim() : null,
-      placed_at: Number(body.placed_at) || now,
+      placed_at: placedAt,
       delivered_at: null,
       created_at: now,
       updated_at: now,
@@ -374,7 +386,7 @@ export function mountOrderRoutes(api, db) {
         amount_cents: acceptedCents,
         tendered_cents: cashReceived,
         method: body.payment_method || 'cash',
-        paid_at: now,
+        paid_at: order.placed_at || now,
         note: 'Initial payment',
       });
     }

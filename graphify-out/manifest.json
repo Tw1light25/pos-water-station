@@ -36,10 +36,10 @@
     "semantic_hash": "cf0812d11510555047885f291142803f"
   },
   "admin/public/assets/js/app.js": {
-    "mtime": 1791963506.3712485,
-    "seen": 1792201155.7903826,
-    "ast_hash": "b9286bcae154e4653e25862487dd1d74",
-    "semantic_hash": "b9286bcae154e4653e25862487dd1d74"
+    "mtime": 1795668270.577551,
+    "seen": 1795668376.782775,
+    "ast_hash": "808236c639c4f9af28669fcc9dbeeb5d",
+    "semantic_hash": ""
   },
   "admin/public/assets/js/category-field.js": {
     "mtime": 1791966102.4807196,
@@ -90,10 +90,10 @@
     "semantic_hash": "0b55900f476a9dfe2b8ee9f144c54f16"
   },
   "admin/public/assets/js/views/orders.js": {
-    "mtime": 1792074787.0260763,
-    "seen": 1792201155.7903898,
-    "ast_hash": "778716a3de5b8d48f090cd9ac556faae",
-    "semantic_hash": "778716a3de5b8d48f090cd9ac556faae"
+    "mtime": 1795667077.14111,
+    "seen": 1795667089.4650047,
+    "ast_hash": "386e14a506c51c84b41c147d33c049f9",
+    "semantic_hash": ""
   },
   "admin/public/assets/js/views/products.js": {
     "mtime": 1791966116.0438092,
@@ -114,10 +114,10 @@
     "semantic_hash": "dcbb4fe446a4b85335e2e0fe747d3bc6"
   },
   "admin/public/assets/js/views/settings.js": {
-    "mtime": 1791957328.6788435,
-    "seen": 1792201155.790393,
-    "ast_hash": "7e5ea5533c25eb7083c158d71c0c500d",
-    "semantic_hash": "7e5ea5533c25eb7083c158d71c0c500d"
+    "mtime": 1795668320.5567982,
+    "seen": 1795668376.7827907,
+    "ast_hash": "71daab732dc8aadaf62794921e3b3035",
+    "semantic_hash": ""
   },
   "admin/public/assets/vendor/chart.umd.min.js": {
     "mtime": 1791950866.1417735,
@@ -162,10 +162,10 @@
     "semantic_hash": "e85544f2d7c2bf5dc30c3302a089214a"
   },
   "admin/routes/index.js": {
-    "mtime": 1791965214.5538273,
-    "seen": 1792201155.7903996,
-    "ast_hash": "a3f4c1d09377969c994814dde61317a0",
-    "semantic_hash": "a3f4c1d09377969c994814dde61317a0"
+    "mtime": 1795668249.3254454,
+    "seen": 1795668376.7828,
+    "ast_hash": "206f59640647c97b20ed3e72d25f6a06",
+    "semantic_hash": ""
   },
   "admin/routes/inventory.js": {
     "mtime": 1791964520.1710947,
@@ -174,10 +174,10 @@
     "semantic_hash": "9c64c15f42bf4c363c40f3f0b714ec65"
   },
   "admin/routes/orders.js": {
-    "mtime": 1792074751.8789244,
-    "seen": 1792201155.790401,
-    "ast_hash": "bec6d9a2295b24aa55608d54a823a07b",
-    "semantic_hash": "bec6d9a2295b24aa55608d54a823a07b"
+    "mtime": 1795667081.7921393,
+    "seen": 1795667089.4650195,
+    "ast_hash": "4cc1ee7088319495173b9691c003909c",
+    "semantic_hash": ""
   },
   "admin/routes/products.js": {
     "mtime": 1791964515.9990656,
@@ -192,10 +192,10 @@
     "semantic_hash": "665b723b7e96693817f1c564e626d435"
   },
   "admin/server.js": {
-    "mtime": 1791957283.3155024,
-    "seen": 1792201155.7904034,
-    "ast_hash": "a6f4d82c1b21474bc93bda8b3a351b5e",
-    "semantic_hash": "a6f4d82c1b21474bc93bda8b3a351b5e"
+    "mtime": 1795668257.1974845,
+    "seen": 1795668376.782807,
+    "ast_hash": "eab5b77914b8ffbefcc8ae1d19814015",
+    "semantic_hash": ""
   },
   "admin/sync/outbox.js": {
     "mtime": 1791951078.5836585,
@@ -246,10 +246,10 @@
     "semantic_hash": "5c1ff1d9b0d9fd9aac195fa19011a7c4"
   },
   "package.json": {
-    "mtime": 1791959911.2489169,
-    "seen": 1792201155.7904103,
-    "ast_hash": "956609394f150b68a02e2013ec318ca2",
-    "semantic_hash": "956609394f150b68a02e2013ec318ca2"
+    "mtime": 1795668252.9804637,
+    "seen": 1795668376.7828176,
+    "ast_hash": "ee42d196187340dfa263ce65b22e58c9",
+    "semantic_hash": ""
   },
   "scripts/backup.js": {
     "mtime": 1791957293.5595794,
@@ -426,10 +426,10 @@
     "semantic_hash": "fdde8c8c6135ef9c5bd723ff255a1467"
   },
   "windows/Install-WaterStationPOS.ps1": {
-    "mtime": 1791954654.7444875,
-    "seen": 1792201155.7904344,
-    "ast_hash": "de03aed641e726ca7cad6da69c106c17",
-    "semantic_hash": "de03aed641e726ca7cad6da69c106c17"
+    "mtime": 1795668307.8847356,
+    "seen": 1795668376.7828493,
+    "ast_hash": "44b30b3db2a1c7a36d8d1e7ee4326072",
+    "semantic_hash": ""
   },
   "windows/Make-Package.ps1": {
     "mtime": 1791957310.5607073,
@@ -444,16 +444,16 @@
     "semantic_hash": "3b577a09007a7cd4a40bc0cc9e0e674b"
   },
   "AGENTS.md": {
-    "mtime": 1792252334.82557,
-    "seen": 1792252344.365899,
-    "ast_hash": "41e33ae78d14d116b421564439272559",
+    "mtime": 1795668366.345024,
+    "seen": 1795668376.7828548,
+    "ast_hash": "c82a90f31edc92f76355ffd25c601edc",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792074905.2765858,
-    "seen": 1792201155.7904375,
-    "ast_hash": "c9565ac2b9d143b0f97c1e2b52d1ec30",
-    "semantic_hash": "c9565ac2b9d143b0f97c1e2b52d1ec30"
+    "mtime": 1795668360.1979938,
+    "seen": 1795668376.782856,
+    "ast_hash": "ad84f4165bbf6f4f4cec7e62af23b419",
+    "semantic_hash": ""
   },
   "admin/public/index.html": {
     "mtime": 1791963489.7546437,
@@ -514,5 +514,29 @@
     "seen": 1792201155.790445,
     "ast_hash": "b3a7e34283d5c94eb9f9ef08a0ca55f4",
     "semantic_hash": "b3a7e34283d5c94eb9f9ef08a0ca55f4"
+  },
+  "admin/routes/update.js": {
+    "mtime": 1795668247.1014345,
+    "seen": 1795668376.7828057,
+    "ast_hash": "e67622167d39d25a1963562b866c35e2",
+    "semantic_hash": ""
+  },
+  "admin/update.js": {
+    "mtime": 1795668259.1594944,
+    "seen": 1795668376.7828102,
+    "ast_hash": "97f759a203a7223cf8f5b2ecc83930af",
+    "semantic_hash": ""
+  },
+  "windows/Run-WaterStationPOS.ps1": {
+    "mtime": 1795668303.2117124,
+    "seen": 1795668376.7828517,
+    "ast_hash": "da236999829498a64a86df2a4e27b2bf",
+    "semantic_hash": ""
+  },
+  "windows/Update-WaterStationPOS.ps1": {
+    "mtime": 1795668296.7636805,
+    "seen": 1795668376.782853,
+    "ast_hash": "6660735bf69803978d5a4231359da982",
+    "semantic_hash": ""
   }
 }

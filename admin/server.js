@@ -16,6 +16,7 @@ import { mountAuthRoutes, requirePageAuth } from './auth.js';
 import { mountApi } from './routes/index.js';
 import { createSyncService } from './sync/sync.js';
 import { createBackupService } from './backup.js';
+import { currentVersion, compareVersions, previousInstall, markInstalled } from './update.js';
 import { OUTBOX_PATH } from './sync/outbox.js';
 
 const PORT = Number(process.env.ADMIN_PORT || 3000);
@@ -36,6 +37,13 @@ const APP_PAGES = [
 const line = (char = '-') => console.log(char.repeat(62));
 
 const db = openLocalDatabase();
+
+// If the launcher just installed a staged update, record it so Settings can
+// confirm the upgrade once instead of silently moving on.
+const previousUpdate = previousInstall();
+if (previousUpdate && compareVersions(previousUpdate.version, currentVersion()) === 0) {
+  markInstalled(previousUpdate.version);
+}
 
 let bootstrap;
 try {
@@ -100,6 +108,7 @@ const server = app.listen(PORT, HOST, () => {
   line();
   console.log('  Water Station POS - local admin');
   line();
+  console.log(`  Version     ${currentVersion()}`);
   console.log(`  Running     ${url}`);
   console.log(`  Project     ${PROJECT_ROOT}`);
   console.log(`  Local db    ${DB_PATH}`);

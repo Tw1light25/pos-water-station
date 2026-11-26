@@ -63,6 +63,7 @@ API routes live in `admin/routes/` and are mounted in `admin/routes/index.js`; e
 
 - Netlify build is already configured in `netlify.toml` (`npm run site:build`, publish `site/`, functions `netlify/functions`). The TiDB IP allowlist must include `0.0.0.0/0`.
 - Client delivery ZIP: `powershell -ExecutionPolicy Bypass -File windows/Make-Package.ps1` (excludes `hide/`, `data/`, `node_modules/`, `.git/`, `.env`).
+- Client updates: tag + publish a GitHub release; each admin polls `/api/update/check`, the owner clicks Update in Settings, and `windows/Run-WaterStationPOS.ps1` installs it after the server exits with code `75`. `package.json` `version` must equal the release tag, and `admin/update.js` `PROTECTED` lists what a swap must never overwrite.
 
 ## graphify
 

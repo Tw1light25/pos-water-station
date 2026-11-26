@@ -111,6 +111,8 @@ function confirmOverStock(shortfalls, onConfirm) {
 function openOrderModal(onDone) {
   const state = { type: 'walkin', items: [{ product_id: products[0]?.id ?? '', qty: 1 }] };
 
+  const today = toDateInput();
+
   const body = `
     <div class="grid grid--2" style="gap: 0 14px">
       <div class="field">
@@ -127,9 +129,16 @@ function openOrderModal(onDone) {
     </div>
     <div class="grid grid--2" style="gap: 0 14px">
       <div class="field">
+        <label class="field__label" for="o-placed">Date of sale</label>
+        <input class="input" id="o-placed" type="date" value="${today}" max="${today}" />
+        <span class="field__hint">Default today. Backdate a sale you failed to record.</span>
+      </div>
+      <div class="field">
         <label class="field__label" for="o-phone">Phone</label>
         <input class="input" id="o-phone" placeholder="0917 000 0000" />
       </div>
+    </div>
+    <div class="grid grid--2" style="gap: 0 14px">
       <div class="field">
         <label class="field__label" for="o-save">Save as customer</label>
         <label class="switch" style="height: 40px">
@@ -223,6 +232,7 @@ function openOrderModal(onDone) {
 
           const payload = {
             order_type: root.querySelector('#o-type').value,
+            placed_at: fromDateInput(root.querySelector('#o-placed').value || today),
             customer_name: root.querySelector('#o-name').value,
             customer_phone: root.querySelector('#o-phone').value,
             address: root.querySelector('#o-address').value,
